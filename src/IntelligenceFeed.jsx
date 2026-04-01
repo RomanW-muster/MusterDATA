@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 
 const RSS_FEEDS = [
   "https://api.rss2json.com/v1/api.json?rss_url=https://graincentral.com/feed",
-  "https://api.rss2json.com/v1/api.json?rss_url=https://www.usda.gov/rss/home.xml",
-  "https://api.rss2json.com/v1/api.json?rss_url=https://www.agriculture.com/rss/news",
-  "https://api.rss2json.com/v1/api.json?rss_url=https://www.farmprogress.com/rss/all",
+  "https://api.rss2json.com/v1/api.json?rss_url=https://commodity.com/feed/",
+  "https://api.rss2json.com/v1/api.json?rss_url=https://www.nasdaq.com/feed/rssoutbound?category=commodities",
+  "https://api.rss2json.com/v1/api.json?rss_url=https://feeds.marketwatch.com/marketwatch/marketpulse/",
 ];
 
 async function fetchRssArticles() {
@@ -70,13 +70,13 @@ export default function IntelligenceFeed() {
           INTELLIGENCE FEED
         </div>
         <div style={{ color: C.charcoal, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
-          {loading ? "Loading live Ag news…" : error ? error : `${articles.length} articles · Grain Central · USDA · Agriculture.com · Farm Progress`}
+          {loading ? "Loading live Ag news…" : error ? error : `${articles.length} articles · Grain Central · Commodity.com · Nasdaq · MarketWatch`}
         </div>
       </div>
 
       {loading && (
         <div style={{ color: C.wheatDark, fontSize: 12, padding: "20px 0" }}>
-          Fetching feeds from Grain Central, USDA, Agriculture.com, Farm Progress…
+          Fetching feeds from Grain Central, Commodity.com, Nasdaq, MarketWatch…
         </div>
       )}
 
@@ -143,7 +143,7 @@ export default function IntelligenceFeed() {
       {!loading && articles.length > 0 && (
         <div style={{ marginTop: 16, padding: "8px 12px", background: C.offwhite, border: `1px dashed ${C.lightGrey}`, borderRadius: 3 }}>
           <span style={{ color: C.wheatDark, fontSize: 10, fontFamily: "'DM Mono',monospace" }}>
-            Sources: Grain Central · USDA · Agriculture.com · Farm Progress · Refreshes every 5 min
+            Sources: Grain Central · Commodity.com · Nasdaq Commodities · MarketWatch · Refreshes every 5 min
           </span>
         </div>
       )}
