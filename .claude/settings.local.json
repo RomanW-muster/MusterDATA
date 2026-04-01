@@ -8,7 +8,9 @@
       "Bash(curl -sI \"https://open.er-api.com/v6/latest/USD\")",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(vercel:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

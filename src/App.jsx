@@ -925,7 +925,7 @@ function HomePage(){
                       <div style={{color:C.charcoal,fontSize:15,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{hasData?c.value:"—"}</div>
                       {c.pct!=null&&<div style={{color:moveColor,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{c.pct>=0?"+":""}{c.pct.toFixed(2)}%</div>}
                     </div>
-                    <div style={{flex:1,fontSize:10,fontFamily:"'IBM Plex Sans',sans-serif",color:C.charcoal,lineHeight:1.4}}>{c.relevance.split('.')[0]}.</div>
+                    <div style={{flex:1,fontSize:10,fontFamily:"'IBM Plex Sans',sans-serif",color:C.charcoal,lineHeight:1.4}}>{(c.relevance||'').split('.')[0]}.</div>
                   </Card>
                 );
               })}
@@ -1280,7 +1280,10 @@ function Education(){
     setAiLoading(false);
   }
   if(activeMod){
-    const mod=EDU_MODULES.find(m=>m.id===activeMod); const sec=mod.sections[activeSec];
+    const mod=EDU_MODULES.find(m=>m.id===activeMod);
+    if(!mod) return <div style={{color:C.wheatDark,padding:20}}>Module not found.</div>;
+    const sec=mod.sections[activeSec]||mod.sections[0];
+    if(!sec) return <div style={{color:C.wheatDark,padding:20}}>Section not found.</div>;
     return (
       <div>
         <button onClick={()=>{setActiveMod(null);setActiveSec(0);}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:C.eucalyptus,cursor:"pointer",fontSize:12,fontFamily:"'DM Mono',monospace",marginBottom:16,padding:0}}>← Back to modules</button>
@@ -1293,7 +1296,7 @@ function Education(){
           <div>
             <Card style={{padding:22,marginBottom:14}}>
               <div style={{color:C.charcoal,fontSize:16,fontWeight:700,marginBottom:14}}>{sec.heading}</div>
-              {sec.content.split("\n\n").map((p,i)=><p key={i} style={{color:C.charcoal,fontSize:13,lineHeight:1.75,marginBottom:12,fontFamily:"'Lora',serif"}}>{p}</p>)}
+              {(sec.content||'').split("\n\n").map((p,i)=><p key={i} style={{color:C.charcoal,fontSize:13,lineHeight:1.75,marginBottom:12,fontFamily:"'Lora',serif"}}>{p}</p>)}
             </Card>
             <div style={{display:"flex",justifyContent:"space-between"}}>
               <button onClick={()=>setActiveSec(s=>Math.max(0,s-1))} disabled={activeSec===0} style={{background:C.white,color:C.charcoal,border:`1px solid ${C.lightGrey}`,borderRadius:3,padding:"8px 16px",cursor:activeSec===0?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",opacity:activeSec===0?0.4:1}}>← PREVIOUS</button>
@@ -1352,7 +1355,7 @@ function TradeJournal(){
   const [filterTag,setFilterTag]=useState("All");
   const allTags=[...new Set(entries.flatMap(e=>e.tags))];
   const filtered=entries.filter(e=>filterTag==="All"||e.tags.includes(filterTag));
-  function add(){setEntries(p=>[...p,{...form,id:Date.now(),pnl:form.pnl?parseFloat(form.pnl):null,tags:form.tags.split(",").map(t=>t.trim()).filter(Boolean),date:form.date||new Date().toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}]);setForm({date:"",commodity:"ZC",direction:"LONG",result:"open",pnl:"",preAnalysis:"",postAnalysis:"",tags:""});setShowAdd(false);}
+  function add(){setEntries(p=>[...p,{...form,id:Date.now(),pnl:form.pnl?parseFloat(form.pnl):null,tags:(form.tags||'').split(",").map(t=>t.trim()).filter(Boolean),date:form.date||new Date().toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}]);setForm({date:"",commodity:"ZC",direction:"LONG",result:"open",pnl:"",preAnalysis:"",postAnalysis:"",tags:""});setShowAdd(false);}
   async function getReview(entry){
     setAiReview("loading"); setAiLoading(true);
     const comm=COMMODITIES.find(c=>c.symbol===entry.commodity);
@@ -1561,7 +1564,7 @@ function CurrenciesTab(){
 
     // Format display value — JPY/IDR/ARS bigger numbers get fewer decimals
     const fmt=v=>{
-      if(v===null) return "—";
+      if(v==null) return "—";
       if(v>=100) return v.toFixed(2);
       if(v>=10)  return v.toFixed(3);
       return v.toFixed(4);
