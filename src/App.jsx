@@ -129,16 +129,63 @@ const WEATHER_DATA = WEATHER_LOCATIONS.map(loc=>({
 }));
 
 const CURRENCIES_META = [
-  {pair:"DXY",    name:"US Dollar Index",   impact:"Soft → tailwind for US exports",      bull:true, fredId:"DTWEXBGS"},
-  {pair:"BRL/USD",name:"Brazilian Real",    impact:"Weak → Brazil selling aggressively",  bull:false,fredId:"DEXBZUS"},
-  {pair:"ARS/USD",name:"Argentine Peso",    impact:"Elevated — watch farmer selling",     bull:false,fredId:"DEXARGE"},
-  {pair:"EUR/USD",name:"Euro",              impact:"Neutral",                             bull:true, fredId:"DEXUSEU"},
-  {pair:"AUD/USD",name:"Australian Dollar", impact:"Weak → AU wheat more competitive",   bull:true, fredId:"DEXUSAL"},
+  // Major
+  {pair:"EUR/USD", name:"Euro",               fredId:"DEXUSEU",  group:"Major",
+   relevance:"EU is a major wheat competitor. Strong EUR makes EU exports expensive, helping US wheat compete in global markets.",
+   affects:"Wheat · Corn", upIsBullish:true},
+  {pair:"GBP/USD", name:"British Pound",      fredId:"DEXUSUK",  group:"Major",
+   relevance:"UK is a key wheat importer and re-exporter. Strong GBP raises buying power for USD-priced grain.",
+   affects:"Wheat", upIsBullish:true},
+  {pair:"USD/JPY", name:"Japanese Yen",       fredId:"DEXJPUS",  group:"Major",
+   relevance:"Japan is a premium beef and wheat buyer. Rising USD/JPY weakens the yen, increasing import costs and reducing demand.",
+   affects:"Wheat · Beef", upIsBullish:false},
+  {pair:"AUD/USD", name:"Australian Dollar",  fredId:"DEXUSAL",  group:"Major",
+   relevance:"Australia is a major wheat and beef exporter. Weak AUD makes Australian exports cheaper, competing directly with US.",
+   affects:"Wheat · Beef", upIsBullish:true},
+  {pair:"NZD/USD", name:"New Zealand Dollar", fredId:"DEXUSNZ",  group:"Major",
+   relevance:"NZ is the global dairy benchmark. Weak NZD makes NZ dairy more competitive, pressuring US dairy exports.",
+   affects:"Dairy", upIsBullish:true},
+  {pair:"USD/CAD", name:"Canadian Dollar",    fredId:"DEXCAUS",  group:"Major",
+   relevance:"Canada is a major wheat and canola competitor. Rising USD/CAD weakens CAD, making Canadian exports cheaper globally.",
+   affects:"Wheat · Canola", upIsBullish:false},
+  {pair:"DXY",     name:"US Dollar Index",    fredId:"DTWEXBGS", group:"Major",
+   relevance:"Master signal for all US Ag exports. Strong DXY makes every US commodity more expensive for global buyers.",
+   affects:"All commodities", upIsBullish:false},
+  // South America
+  {pair:"USD/BRL", name:"Brazilian Real",     fredId:"DEXBZUS",  group:"South America",
+   relevance:"Most critical for soybeans. Rising USD/BRL weakens BRL — Brazilian farmers earn more local currency per tonne sold, flooding world markets.",
+   affects:"Soybeans · Corn", upIsBullish:false},
+  {pair:"USD/ARS", name:"Argentine Peso",     fredId:"DEXARGE",  group:"South America",
+   relevance:"Argentina is the world's largest soy meal exporter. Chronic ARS weakness drives relentless farmer selling and bearish global meal supply.",
+   affects:"Soy Meal · Soybeans", upIsBullish:false},
+  {pair:"USD/MXN", name:"Mexican Peso",       fredId:"DEXMXUS",  group:"South America",
+   relevance:"Mexico is the #1 customer for US corn. Rising USD/MXN weakens MXN, reducing Mexican purchasing power for US corn imports.",
+   affects:"Corn", upIsBullish:false},
+  // Asia Pacific
+  {pair:"USD/CNY", name:"Chinese Yuan",       fredId:"DEXCHUS",  group:"Asia Pacific",
+   relevance:"China is the world's largest Ag importer. Rising USD/CNY weakens yuan — Chinese buyers pay more in domestic terms, may cut back across all commodities.",
+   affects:"Soybeans · Corn · Pork", upIsBullish:false},
+  {pair:"USD/INR", name:"Indian Rupee",       fredId:"DEXINUS",  group:"Asia Pacific",
+   relevance:"India is a major pulse, cotton and vegetable oil buyer. Weak INR raises USD-priced import costs, may shift India toward domestic production.",
+   affects:"Pulses · Cotton", upIsBullish:false},
+  {pair:"USD/IDR", name:"Indonesian Rupiah",  fredId:"DEXIDUS",  group:"Asia Pacific",
+   relevance:"Indonesia is one of the world's largest wheat importers. Weak IDR makes USD-priced wheat expensive, suppressing import demand.",
+   affects:"Wheat", upIsBullish:false},
+  {pair:"USD/MYR", name:"Malaysian Ringgit",  fredId:"DEXMAUS",  group:"Asia Pacific",
+   relevance:"Malaysia is the #2 global palm oil producer. Weak MYR makes palm oil exports cheap, competing directly with US soybean oil.",
+   affects:"Soybean Oil", upIsBullish:false},
+  {pair:"USD/THB", name:"Thai Baht",          fredId:"DEXTHUS",  group:"Asia Pacific",
+   relevance:"Thailand is a major rice and sugar exporter competing with US products across Asian and African markets.",
+   affects:"Rice · Sugar", upIsBullish:false},
+  // Other
+  {pair:"USD/ZAR", name:"South African Rand", fredId:"DEXSFUS",  group:"Other",
+   relevance:"South Africa is a major white maize producer. Weak ZAR makes SA maize exports cheap, displacing US corn in African markets.",
+   affects:"Corn", upIsBullish:false},
 ];
 
 // Used as static fallback and for the home page summary widget
 const CURRENCIES_DATA = CURRENCIES_META.map(m=>({
-  ...m, value:null, change:null, pct:null,
+  ...m, value:null, change:null, pct:null, live:false,
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -166,30 +213,27 @@ async function fetchWeatherData() {
   });
 }
 
-function parseFredCsv(csv) {
-  const lines = csv.trim().split("\n").filter(l => l && !l.startsWith("DATE"));
-  const valid = lines.filter(l => {
-    const parts = l.split(",");
-    return parts[1] && parts[1].trim() !== ".";
-  });
-  if (valid.length < 2) return { value: null, change: null, pct: null };
-  const latest = parseFloat(valid[valid.length - 1].split(",")[1]);
-  const prev = parseFloat(valid[valid.length - 2].split(",")[1]);
-  const change = latest - prev;
-  const pct = prev !== 0 ? (change / prev) * 100 : 0;
-  return { value: latest, change, pct };
-}
-
 async function fetchCurrenciesData() {
   const results = await Promise.all(
     CURRENCIES_META.map(m =>
       fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${m.fredId}`)
-        .then(r => r.text())
-        .then(csv => parseFredCsv(csv))
-        .catch(() => ({ value: null, change: null, pct: null }))
+        .then(r => r.ok ? r.text() : null)
+        .catch(() => null)
     )
   );
-  return CURRENCIES_META.map((m, i) => ({ ...m, ...results[i] }));
+  return CURRENCIES_META.map((m, i) => {
+    const text = results[i];
+    if (!text) return { ...m, value: null, change: null, pct: null, live: false };
+    const rows = text.trim().split('\n').slice(1)
+      .map(row => { const v = parseFloat(row.split(',')[1]); return isNaN(v) ? null : v; })
+      .filter(v => v !== null);
+    if (!rows.length) return { ...m, value: null, change: null, pct: null, live: false };
+    const current = rows[rows.length - 1];
+    const prev = rows.length > 1 ? rows[rows.length - 2] : null;
+    const change = prev !== null ? current - prev : null;
+    const pct = prev !== null && prev !== 0 ? (change / prev) * 100 : null;
+    return { ...m, value: parseFloat(current.toFixed(4)), change, pct, live: true };
+  });
 }
 
 const WASDE_DATA = {
@@ -1493,35 +1537,141 @@ function WeatherTab(){
 function CurrenciesTab(){
   const [currData,setCurrData]=useState(CURRENCIES_DATA);
   const [loading,setLoading]=useState(true);
+  const anyLive=currData.some(c=>c.live);
+
   useEffect(()=>{
-    fetchCurrenciesData().then(data=>{setCurrData(data);setLoading(false);}).catch(()=>setLoading(false));
+    let cancelled=false;
+    function load(){
+      fetchCurrenciesData().then(data=>{if(!cancelled){setCurrData(data);setLoading(false);}}).catch(()=>{if(!cancelled)setLoading(false);});
+    }
+    load();
+    const iv=setInterval(load,300000);
+    return()=>{cancelled=true;clearInterval(iv);};
   },[]);
-  return (
-    <div>
-      <SectionHead label="CURRENCIES & AG EXPORT IMPACT" sub={loading?"Loading live rates from FRED…":"Live rates · FRED · Updates every 5 min"}/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10,marginBottom:22}}>
-        {currData.map((c,i)=>(
-          <Card key={i} style={{borderTop:`3px solid ${c.bull?C.eucalyptus:C.negative}`,padding:16}}>
-            <div style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:4}}>{c.name}</div>
-            <div style={{color:C.navy,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.1em",marginBottom:6}}>{c.pair}</div>
-            <div style={{color:C.charcoal,fontSize:24,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:3}}>{c.value!==null?c.value:"—"}</div>
-            <div style={{color:c.pct!=null&&c.pct>0?(c.pair==="DXY"?C.negative:C.eucalyptus):C.eucalyptus,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:10}}>{c.pct!=null?(c.pct>0?"+":"")+c.pct.toFixed(2)+"%":"—"}</div>
-            <div style={{color:C.charcoal,fontSize:11,padding:"6px 9px",background:c.bull?C.eucalyptusPale:C.negativePale,borderRadius:2,borderLeft:`3px solid ${c.bull?C.eucalyptus:C.negative}`,marginBottom:8}}>{c.impact}</div>
-            <a href={`https://fred.stlouisfed.org/series/${c.fredId}`} target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none"}}>Source: FRED →</a>
-          </Card>
-        ))}
-      </div>
-      <Card style={{padding:20}}>
-        <SectionHead label="HOW CURRENCIES MOVE AG MARKETS"/>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-          {[{t:"Strong USD → Bearish Grains",d:"US exports become more expensive for foreign buyers. They shift purchases to Brazil, Argentina or EU — reducing US demand and pushing prices lower. Watch DXY weekly: above 105 starts to bite on export competitiveness."},{t:"Weak BRL → More Brazil Competition",d:"Brazilian farmers receive more local currency per USD sold, incentivising selling. The most important currency relationship for soybean traders — Brazil is the world's largest soy exporter."},{t:"Weak ARS → Argentina Selling Flood",d:"Argentine farmers hoard grain as an inflation hedge. 'Soy dollar' programs that force selling flood the market — highly bearish soy meal and soybeans globally."},{t:"Watch Export Sales Every Thursday",d:"USDA export sales (Thursday 7:30am CT) shows actual weekly new sales commitments. If USD strength or competitor supply is hurting US exports, you'll see it here first."}].map((item,i)=>(
-            <div key={i} style={{borderLeft:`3px solid ${C.wheat}`,paddingLeft:14}}>
-              <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:5}}>{item.t}</div>
-              <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6}}>{item.d}</div>
-            </div>
-          ))}
+
+  const GROUPS=["Major","South America","Asia Pacific","Other"];
+
+  function CurrCard({c}){
+    const hasData=c.value!==null;
+    // Is the current move bullish or bearish for US Ag?
+    const moveIsGood=c.pct!=null&&((c.pct>0&&c.upIsBullish)||(c.pct<0&&!c.upIsBullish));
+    const moveColor=c.pct==null?C.wheatDark:moveIsGood?C.eucalyptus:C.negative;
+    const accentColor=moveIsGood?C.eucalyptus:C.negative;
+    const bgPale=moveIsGood?C.eucalyptusPale:c.pct==null?"#f7f5f0":C.negativePale;
+
+    // Format display value — JPY/IDR/ARS bigger numbers get fewer decimals
+    const fmt=v=>{
+      if(v===null) return "—";
+      if(v>=100) return v.toFixed(2);
+      if(v>=10)  return v.toFixed(3);
+      return v.toFixed(4);
+    };
+
+    return (
+      <Card style={{borderTop:`3px solid ${hasData?accentColor:C.lightGrey}`,padding:16,display:"flex",flexDirection:"column",gap:0}}>
+        {/* Header row */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+          <div>
+            <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:"0.08em",marginBottom:2}}>{c.name}</div>
+            <div style={{color:C.charcoal,fontSize:15,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.1em"}}>{c.pair}</div>
+          </div>
+          <span style={{fontSize:8,fontFamily:"'DM Mono',monospace",padding:"2px 6px",borderRadius:2,fontWeight:600,letterSpacing:"0.06em",
+            background:c.live?"#e8f4ee":"#f0f0f0",color:c.live?C.eucalyptus:"#999"}}>
+            {c.live?"● LIVE":"○ SIM"}
+          </span>
+        </div>
+
+        {/* Rate */}
+        <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:8}}>
+          <span style={{color:C.charcoal,fontSize:26,fontFamily:"'DM Mono',monospace",fontWeight:700,lineHeight:1}}>{fmt(c.value)}</span>
+          {c.pct!=null&&(
+            <span style={{color:moveColor,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
+              {c.pct>=0?"+":""}{c.pct.toFixed(2)}%
+            </span>
+          )}
+        </div>
+
+        {/* Change */}
+        {c.change!=null&&(
+          <div style={{color:moveColor,fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:10}}>
+            {c.change>=0?"+":""}{c.change.toFixed(4)} day change
+          </div>
+        )}
+
+        {/* Relevance */}
+        <div style={{fontSize:11,fontFamily:"'IBM Plex Sans',sans-serif",lineHeight:1.55,color:C.charcoal,padding:"8px 10px",background:bgPale,borderLeft:`3px solid ${hasData?accentColor:C.lightGrey}`,borderRadius:2,marginBottom:8,flex:1}}>
+          {c.relevance}
+        </div>
+
+        {/* Affects + source */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.wheatDark,letterSpacing:"0.05em"}}>{c.affects}</span>
+          <a href={`https://fred.stlouisfed.org/series/${c.fredId}`} target="_blank" rel="noopener noreferrer"
+            style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none"}}
+            onMouseEnter={e=>e.target.style.textDecoration="underline"}
+            onMouseLeave={e=>e.target.style.textDecoration="none"}>
+            FRED →
+          </a>
         </div>
       </Card>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <SectionHead label="CURRENCIES & AG EXPORT IMPACT"
+          sub={loading?"Fetching FRED data…":anyLive?"Live rates from FRED · Updates every 5 min":"Simulated — FRED unavailable (CORS)"}/>
+        {!loading&&(
+          <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",padding:"3px 9px",borderRadius:2,
+            background:anyLive?"#e8f4ee":"#f0f0f0",color:anyLive?C.eucalyptus:"#999",fontWeight:600,letterSpacing:"0.06em",flexShrink:0,marginTop:2}}>
+            {anyLive?"● FRED LIVE":"○ SIMULATED"}
+          </span>
+        )}
+      </div>
+
+      {loading&&(
+        <div style={{color:C.wheatDark,fontSize:12,fontFamily:"'DM Mono',monospace",padding:"32px 0",textAlign:"center"}}>
+          Fetching 16 currency pairs from FRED…
+        </div>
+      )}
+
+      {!loading&&GROUPS.map(group=>{
+        const cards=currData.filter(c=>c.group===group);
+        if(!cards.length) return null;
+        return (
+          <div key={group} style={{marginBottom:28}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+              <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.12em",color:C.wheatDark}}>{group.toUpperCase()}</span>
+              <div style={{flex:1,height:1,background:C.lightGrey}}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+              {cards.map((c,i)=><CurrCard key={i} c={c}/>)}
+            </div>
+          </div>
+        );
+      })}
+
+      {!loading&&(
+        <Card style={{padding:20,marginTop:8}}>
+          <SectionHead label="HOW CURRENCIES MOVE AG MARKETS"/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:18}}>
+            {[
+              {t:"Strong DXY → Bearish All US Grains",d:"US exports become more expensive for every foreign buyer. Demand shifts to Brazil, Argentina and EU — reducing US market share. Watch DXY weekly: sustained moves above 105 meaningfully hurt export competitiveness."},
+              {t:"Weak BRL → Brazil Flooding Markets",d:"Brazilian farmers receive more reais per tonne sold. This incentivises aggressive selling. The most important single currency relationship for soybean traders — Brazil ships over 50% of world soy."},
+              {t:"Weak ARS → Argentine Meal Pressure",d:"Argentina is the world's largest meal exporter. Chronic peso devaluation forces farmer selling. 'Soy dollar' programs that compel grain selling are highly bearish global soy meal."},
+              {t:"Weak CNY → China Buys Less",d:"China is the #1 buyer of US soybeans. When yuan weakens against USD, US prices rise in yuan terms. China may delay purchases, cancel cargoes or shift to Brazil. Watch USD/CNY closely around WASDE."},
+              {t:"Weak Importer Currencies → Demand Destruction",d:"Rising USD/IDR, USD/INR, USD/THB all raise the local cost of USD-priced grain. Sustained weakness reduces import budgets across the Asia-Pacific, the world's largest import region."},
+              {t:"Monitor Export Sales Each Thursday",d:"USDA Export Sales (7:30am CT) shows weekly new commitments. Currency moves often show up here first — a sharp USD rally followed by weak export sales confirms the demand destruction thesis."},
+            ].map((item,i)=>(
+              <div key={i} style={{borderLeft:`3px solid ${C.wheat}`,paddingLeft:14}}>
+                <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:5,fontFamily:"'IBM Plex Sans',sans-serif"}}>{item.t}</div>
+                <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6,fontFamily:"'IBM Plex Sans',sans-serif"}}>{item.d}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
@@ -1563,8 +1713,12 @@ function ReportsTab(){
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Muster() {
   const [tab,setTab]=useState("home");
+  const [subTabMemory,setSubTabMemory]=useState({markets:"charts",intelligence:"intel",trading:"scorecard",learn:"education"});
   const [time,setTime]=useState(new Date());
   const [refreshKey,setRefreshKey]=useState(0);
+  const [searchQuery,setSearchQuery]=useState("");
+  const [searchCursor,setSearchCursor]=useState(-1);
+  const searchRef=useRef(null);
   useEffect(()=>{const t=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(t);},[]);
   // Global data refresh — runs on mount and every 5 minutes
   useEffect(()=>{
@@ -1595,6 +1749,106 @@ export default function Muster() {
     {id:"intel",    label:"INTELLIGENCE",  emoji:"🧠"},
     {id:"autotrader",label:"AUTO TRADER",  emoji:"🤖"},
   ];
+
+  const PRIMARY_NAV=[
+    {id:"home",        label:"HOME"},
+    {id:"markets",     label:"MARKETS"},
+    {id:"intelligence",label:"INTELLIGENCE"},
+    {id:"trading",     label:"TRADING"},
+    {id:"learn",       label:"LEARN"},
+  ];
+  const SUB_TABS={
+    markets:[
+      {id:"charts",    label:"Price Charts"},
+      {id:"supply",    label:"Supply & Demand"},
+      {id:"seasonal",  label:"Seasonals"},
+      {id:"cot",       label:"COT Charts"},
+      {id:"weather",   label:"Weather"},
+      {id:"currencies",label:"Currencies"},
+      {id:"australia", label:"Australia"},
+    ],
+    intelligence:[
+      {id:"intel",   label:"News Feed"},
+      {id:"analyst", label:"AI Analyst"},
+      {id:"reports", label:"Reports"},
+    ],
+    trading:[
+      {id:"scorecard", label:"Scorecard"},
+      {id:"portfolio", label:"Portfolio"},
+      {id:"autotrader",label:"Auto Trader"},
+      {id:"backtest",  label:"Backtesting"},
+      {id:"alerts",    label:"Alerts"},
+    ],
+    learn:[
+      {id:"education",label:"Education"},
+      {id:"journal",  label:"Trade Journal"},
+      {id:"equities", label:"AG Equities"},
+    ],
+  };
+  const TAB_TO_CATEGORY={
+    home:"home",
+    charts:"markets",supply:"markets",seasonal:"markets",cot:"markets",
+    weather:"markets",currencies:"markets",australia:"markets",
+    intel:"intelligence",analyst:"intelligence",reports:"intelligence",
+    scorecard:"trading",portfolio:"trading",autotrader:"trading",
+    backtest:"trading",alerts:"trading",
+    education:"learn",journal:"learn",equities:"learn",
+  };
+  function navigateToTab(id){
+    setTab(id);
+    const cat=TAB_TO_CATEGORY[id];
+    if(cat&&cat!=="home") setSubTabMemory(prev=>({...prev,[cat]:id}));
+  }
+  const activeCategory=TAB_TO_CATEGORY[tab]||"home";
+
+  const SEARCH_INDEX=useMemo(()=>[
+    // Tabs
+    ...TABS.map(t=>({tabId:t.id,label:t.label,sub:"Tab",emoji:t.emoji,keywords:t.label.toLowerCase()})),
+    // Commodities → charts tab
+    ...COMMODITIES.map(c=>({tabId:"charts",label:c.name,sub:`${c.sector} · Price Charts`,emoji:c.emoji,keywords:`${c.name} ${c.symbol} ${c.sector}`.toLowerCase()})),
+    // Commodities → scorecard tab
+    ...COMMODITIES.map(c=>({tabId:"scorecard",label:`${c.name} Scorecard`,sub:"Scorecard",emoji:c.emoji,keywords:`${c.name} ${c.symbol} scorecard signal`.toLowerCase()})),
+    // Currencies
+    ...CURRENCIES_META.map(c=>({tabId:"currencies",label:c.pair,sub:`${c.name} · Currencies`,emoji:"💱",keywords:`${c.pair} ${c.name} currency fx`.toLowerCase()})),
+    // Section headings
+    {tabId:"supply",   label:"WASDE Data",         sub:"Supply & Demand",emoji:"⚖️", keywords:"wasde supply demand stocks"},
+    {tabId:"supply",   label:"Stocks-to-Use Ratio", sub:"Supply & Demand",emoji:"⚖️", keywords:"stocks use ratio stur"},
+    {tabId:"cot",      label:"COT Positioning",     sub:"COT Charts",     emoji:"📉", keywords:"cot commitment traders positioning"},
+    {tabId:"reports",  label:"Export Inspections",  sub:"Reports",        emoji:"📋", keywords:"export inspections usda"},
+    {tabId:"weather",  label:"Crop Weather",        sub:"Weather",        emoji:"🌦️",keywords:"weather crop drought rainfall temperature"},
+    {tabId:"backtest", label:"Backtesting Engine",  sub:"Backtesting",    emoji:"🔬", keywords:"backtest strategy signals ma cross"},
+    {tabId:"seasonal", label:"Seasonal Patterns",   sub:"Seasonals",      emoji:"📈", keywords:"seasonal patterns calendar"},
+    {tabId:"education",label:"Trading Education",   sub:"Education",      emoji:"📚", keywords:"education learn beginner futures"},
+    {tabId:"journal",  label:"Trade Journal",       sub:"Journal",        emoji:"📓", keywords:"journal trade log review"},
+    {tabId:"portfolio",label:"Open Positions",      sub:"Portfolio",      emoji:"💼", keywords:"portfolio positions open trades"},
+    {tabId:"equities", label:"Ag Equities",         sub:"AG Equities",    emoji:"🏢", keywords:"equities stocks asx listed ag"},
+    {tabId:"alerts",   label:"Price Alerts",        sub:"Alerts",         emoji:"🔔", keywords:"alerts price notifications"},
+    {tabId:"australia",label:"Australian Markets",  sub:"Australia",      emoji:"🦘", keywords:"australia wheat beef wool asx aud eyci"},
+    {tabId:"intel",    label:"Intelligence Feed",   sub:"Intelligence",   emoji:"🧠", keywords:"intelligence news feed headlines"},
+    {tabId:"autotrader",label:"Auto Trader",        sub:"Auto Trader",    emoji:"🤖", keywords:"auto trader paper trading signals ai"},
+    {tabId:"analyst",  label:"AI Market Analyst",   sub:"AI Analyst",     emoji:"◆",  keywords:"ai analyst chat market question"},
+  ],[]);
+
+  const searchResults=useMemo(()=>{
+    const q=searchQuery.trim().toLowerCase();
+    if(!q) return [];
+    return SEARCH_INDEX.filter(e=>e.keywords.includes(q)||e.label.toLowerCase().includes(q)||e.sub.toLowerCase().includes(q)).slice(0,8);
+  },[searchQuery,SEARCH_INDEX]);
+
+  function handleSearchKey(e){
+    if(!searchResults.length) return;
+    if(e.key==="ArrowDown"){e.preventDefault();setSearchCursor(c=>Math.min(c+1,searchResults.length-1));}
+    else if(e.key==="ArrowUp"){e.preventDefault();setSearchCursor(c=>Math.max(c-1,0));}
+    else if(e.key==="Enter"){e.preventDefault();const r=searchResults[searchCursor>=0?searchCursor:0];if(r){navigateToTab(r.tabId);setSearchQuery("");setSearchCursor(-1);}}
+    else if(e.key==="Escape"){setSearchQuery("");setSearchCursor(-1);}
+  }
+
+  // Close search on outside click
+  useEffect(()=>{
+    function handleClick(e){if(searchRef.current&&!searchRef.current.contains(e.target)){setSearchQuery("");setSearchCursor(-1);}}
+    document.addEventListener("mousedown",handleClick);
+    return()=>document.removeEventListener("mousedown",handleClick);
+  },[]);
 
   return (
     <div style={{background:C.eggshell,minHeight:"100vh",color:C.charcoal,fontFamily:"'IBM Plex Sans',sans-serif"}}>
@@ -1637,17 +1891,75 @@ export default function Muster() {
       {/* TICKER */}
       <Ticker/>
 
-      {/* NAV */}
-      <div style={{background:C.white,borderBottom:`2px solid ${C.lightGrey}`,overflowX:"auto",position:"sticky",top:56,zIndex:99}}>
-        <div style={{display:"flex",padding:"0 24px",minWidth:"max-content"}}>
-          {TABS.map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${C.eucalyptus}`:"2px solid transparent",padding:"10px 13px",marginBottom:"-2px",color:tab===t.id?C.eucalyptus:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",cursor:"pointer",transition:"color 0.15s",fontWeight:tab===t.id?600:400,whiteSpace:"nowrap"}}
-            onMouseEnter={e=>{if(tab!==t.id)e.target.style.color=C.charcoal;}}
-            onMouseLeave={e=>{if(tab!==t.id)e.target.style.color=C.wheatDark;}}
-            >{t.emoji} {t.label}</button>
-          ))}
+      {/* PRIMARY NAV */}
+      <div style={{background:C.white,borderBottom:activeCategory==="home"?`2px solid ${C.lightGrey}`:"none",position:"sticky",top:56,zIndex:99,display:"flex",alignItems:"stretch",boxShadow:activeCategory!=="home"?"0 1px 0 0 "+C.lightGrey:"none"}}>
+        <div style={{flex:1,display:"flex",padding:"0 0 0 20px"}}>
+          {PRIMARY_NAV.map(p=>{
+            const isActive=activeCategory===p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={()=>{
+                  if(p.id==="home"){setTab("home");}
+                  else{const dest=subTabMemory[p.id]||SUB_TABS[p.id][0].id;setTab(dest);}
+                }}
+                style={{background:"none",border:"none",borderBottom:isActive?`3px solid ${C.eucalyptus}`:"3px solid transparent",padding:"0 16px",marginBottom:"-1px",height:48,color:isActive?C.eucalyptus:C.charcoal,fontSize:13,fontFamily:"'IBM Plex Sans',sans-serif",letterSpacing:"0.06em",fontWeight:isActive?700:500,cursor:"pointer",transition:"color 0.15s",whiteSpace:"nowrap"}}
+                onMouseEnter={e=>{if(!isActive){e.currentTarget.style.color=C.eucalyptus;e.currentTarget.style.borderBottomColor=C.eucalyptusPale;}}}
+                onMouseLeave={e=>{if(!isActive){e.currentTarget.style.color=C.charcoal;e.currentTarget.style.borderBottomColor="transparent";}}}
+              >{p.label}</button>
+            );
+          })}
+        </div>
+        {/* SEARCH */}
+        <div ref={searchRef} style={{position:"relative",display:"flex",alignItems:"center",padding:"0 16px",borderLeft:`1px solid ${C.lightGrey}`,flexShrink:0}}>
+          <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+            <span style={{position:"absolute",left:8,color:C.wheatDark,fontSize:12,pointerEvents:"none",fontFamily:"'DM Mono',monospace"}}>⌕</span>
+            <input
+              type="text"
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={e=>{setSearchQuery(e.target.value);setSearchCursor(-1);}}
+              onKeyDown={handleSearchKey}
+              style={{paddingLeft:24,paddingRight:8,height:26,width:160,border:`1px solid ${C.lightGrey}`,borderRadius:3,fontSize:11,fontFamily:"'IBM Plex Sans',sans-serif",color:C.charcoal,background:C.offwhite,outline:"none",transition:"border-color 0.15s"}}
+              onFocus={e=>e.target.style.borderColor=C.eucalyptus}
+              onBlur={e=>e.target.style.borderColor=C.lightGrey}
+            />
+          </div>
+          {searchResults.length>0&&(
+            <div style={{position:"absolute",top:"100%",right:0,width:280,background:C.white,border:`1px solid ${C.lightGrey}`,borderTop:"none",borderRadius:"0 0 4px 4px",boxShadow:"0 6px 16px rgba(0,0,0,0.10)",zIndex:200}}>
+              {searchResults.map((r,i)=>(
+                <div
+                  key={i}
+                  onMouseDown={()=>{navigateToTab(r.tabId);setSearchQuery("");setSearchCursor(-1);}}
+                  onMouseEnter={()=>setSearchCursor(i)}
+                  style={{padding:"8px 14px",cursor:"pointer",background:i===searchCursor?`${C.wheat}22`:C.white,borderBottom:i<searchResults.length-1?`1px solid ${C.lightGrey}`:"none",display:"flex",alignItems:"baseline",gap:8}}
+                >
+                  <span style={{fontSize:12,fontFamily:"'IBM Plex Sans',sans-serif",fontWeight:500,color:C.charcoal,flex:1}}>{r.label}</span>
+                  {r.sub&&<span style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.wheatDark,letterSpacing:"0.05em",flexShrink:0}}>{r.sub}</span>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* SECONDARY NAV */}
+      {activeCategory!=="home"&&SUB_TABS[activeCategory]&&(
+        <div style={{background:C.offwhite,borderBottom:`2px solid ${C.lightGrey}`,position:"sticky",top:104,zIndex:98,display:"flex",padding:"0 20px",overflowX:"auto"}}>
+          {SUB_TABS[activeCategory].map(s=>{
+            const isActive=tab===s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={()=>navigateToTab(s.id)}
+                style={{background:"none",border:"none",borderBottom:isActive?`2px solid ${C.wheat}`:"2px solid transparent",padding:"0 14px",marginBottom:"-2px",height:36,color:isActive?C.wheatDark:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",fontWeight:isActive?600:400,cursor:"pointer",transition:"color 0.15s",whiteSpace:"nowrap",opacity:isActive?1:0.7}}
+                onMouseEnter={e=>{if(!isActive){e.currentTarget.style.opacity="1";e.currentTarget.style.color=C.wheatDark;}}}
+                onMouseLeave={e=>{if(!isActive){e.currentTarget.style.opacity="0.7";e.currentTarget.style.color=C.charcoal;}}}
+              >{s.label}</button>
+            );
+          })}
+        </div>
+      )}
 
       {/* CONTENT */}
       <div style={{padding:"22px 24px",animation:"fadeIn 0.2s ease"}}>
@@ -1680,4 +1992,3 @@ export default function Muster() {
     </div>
   );
 }
-
