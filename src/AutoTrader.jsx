@@ -700,7 +700,7 @@ export default function AutoTrader() {
                         <span style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace"}}>{pos.openedAt?.toLocaleTimeString("en-AU")}</span>
                       </div>
                       <div style={{display:"grid",gridTemplateColumns:"repeat(5,auto)",gap:"4px 20px",marginBottom:10}}>
-                        {[["ENTRY",pos.entryPrice.toFixed(4),C.charcoal],["CURRENT",cur.toFixed(4),up?C.eucalyptus:C.negative],["STOP",pos.stopLoss.toFixed(4),C.negative],["TARGET",pos.takeProfit.toFixed(4),C.eucalyptus],["MARGIN",$`$${pos.marginUsed.toFixed(0)}`,C.navy]].map(([l,v,c])=>(
+                        {[["ENTRY",pos.entryPrice.toFixed(4),C.charcoal],["CURRENT",cur.toFixed(4),up?C.eucalyptus:C.negative],["STOP",pos.stopLoss.toFixed(4),C.negative],["TARGET",pos.takeProfit.toFixed(4),C.eucalyptus],["MARGIN",`$${pos.marginUsed.toFixed(0)}`,C.navy]].map(([l,v,c])=>(
                           <div key={l}><div style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:1}}>{l}</div><div style={{color:c,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</div></div>
                         ))}
                       </div>
