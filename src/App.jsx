@@ -129,16 +129,63 @@ const WEATHER_DATA = WEATHER_LOCATIONS.map(loc=>({
 }));
 
 const CURRENCIES_META = [
-  {pair:"DXY",    name:"US Dollar Index",   impact:"Soft → tailwind for US exports",      bull:true, fredId:"DTWEXBGS"},
-  {pair:"BRL/USD",name:"Brazilian Real",    impact:"Weak → Brazil selling aggressively",  bull:false,fredId:"DEXBZUS"},
-  {pair:"ARS/USD",name:"Argentine Peso",    impact:"Elevated — watch farmer selling",     bull:false,fredId:"DEXARGE"},
-  {pair:"EUR/USD",name:"Euro",              impact:"Neutral",                             bull:true, fredId:"DEXUSEU"},
-  {pair:"AUD/USD",name:"Australian Dollar", impact:"Weak → AU wheat more competitive",   bull:true, fredId:"DEXUSAL"},
+  // Major
+  {pair:"EUR/USD", name:"Euro",               fredId:"DEXUSEU",  group:"Major",
+   relevance:"EU is a major wheat competitor. Strong EUR makes EU exports expensive, helping US wheat compete in global markets.",
+   affects:"Wheat · Corn", upIsBullish:true},
+  {pair:"GBP/USD", name:"British Pound",      fredId:"DEXUSUK",  group:"Major",
+   relevance:"UK is a key wheat importer and re-exporter. Strong GBP raises buying power for USD-priced grain.",
+   affects:"Wheat", upIsBullish:true},
+  {pair:"USD/JPY", name:"Japanese Yen",       fredId:"DEXJPUS",  group:"Major",
+   relevance:"Japan is a premium beef and wheat buyer. Rising USD/JPY weakens the yen, increasing import costs and reducing demand.",
+   affects:"Wheat · Beef", upIsBullish:false},
+  {pair:"AUD/USD", name:"Australian Dollar",  fredId:"DEXUSAL",  group:"Major",
+   relevance:"Australia is a major wheat and beef exporter. Weak AUD makes Australian exports cheaper, competing directly with US.",
+   affects:"Wheat · Beef", upIsBullish:true},
+  {pair:"NZD/USD", name:"New Zealand Dollar", fredId:"DEXUSNZ",  group:"Major",
+   relevance:"NZ is the global dairy benchmark. Weak NZD makes NZ dairy more competitive, pressuring US dairy exports.",
+   affects:"Dairy", upIsBullish:true},
+  {pair:"USD/CAD", name:"Canadian Dollar",    fredId:"DEXCAUS",  group:"Major",
+   relevance:"Canada is a major wheat and canola competitor. Rising USD/CAD weakens CAD, making Canadian exports cheaper globally.",
+   affects:"Wheat · Canola", upIsBullish:false},
+  {pair:"DXY",     name:"US Dollar Index",    fredId:"DTWEXBGS", group:"Major",
+   relevance:"Master signal for all US Ag exports. Strong DXY makes every US commodity more expensive for global buyers.",
+   affects:"All commodities", upIsBullish:false},
+  // South America
+  {pair:"USD/BRL", name:"Brazilian Real",     fredId:"DEXBZUS",  group:"South America",
+   relevance:"Most critical for soybeans. Rising USD/BRL weakens BRL — Brazilian farmers earn more local currency per tonne sold, flooding world markets.",
+   affects:"Soybeans · Corn", upIsBullish:false},
+  {pair:"USD/ARS", name:"Argentine Peso",     fredId:"DEXARGE",  group:"South America",
+   relevance:"Argentina is the world's largest soy meal exporter. Chronic ARS weakness drives relentless farmer selling and bearish global meal supply.",
+   affects:"Soy Meal · Soybeans", upIsBullish:false},
+  {pair:"USD/MXN", name:"Mexican Peso",       fredId:"DEXMXUS",  group:"South America",
+   relevance:"Mexico is the #1 customer for US corn. Rising USD/MXN weakens MXN, reducing Mexican purchasing power for US corn imports.",
+   affects:"Corn", upIsBullish:false},
+  // Asia Pacific
+  {pair:"USD/CNY", name:"Chinese Yuan",       fredId:"DEXCHUS",  group:"Asia Pacific",
+   relevance:"China is the world's largest Ag importer. Rising USD/CNY weakens yuan — Chinese buyers pay more in domestic terms, may cut back across all commodities.",
+   affects:"Soybeans · Corn · Pork", upIsBullish:false},
+  {pair:"USD/INR", name:"Indian Rupee",       fredId:"DEXINUS",  group:"Asia Pacific",
+   relevance:"India is a major pulse, cotton and vegetable oil buyer. Weak INR raises USD-priced import costs, may shift India toward domestic production.",
+   affects:"Pulses · Cotton", upIsBullish:false},
+  {pair:"USD/IDR", name:"Indonesian Rupiah",  fredId:"DEXIDUS",  group:"Asia Pacific",
+   relevance:"Indonesia is one of the world's largest wheat importers. Weak IDR makes USD-priced wheat expensive, suppressing import demand.",
+   affects:"Wheat", upIsBullish:false},
+  {pair:"USD/MYR", name:"Malaysian Ringgit",  fredId:"DEXMAUS",  group:"Asia Pacific",
+   relevance:"Malaysia is the #2 global palm oil producer. Weak MYR makes palm oil exports cheap, competing directly with US soybean oil.",
+   affects:"Soybean Oil", upIsBullish:false},
+  {pair:"USD/THB", name:"Thai Baht",          fredId:"DEXTHUS",  group:"Asia Pacific",
+   relevance:"Thailand is a major rice and sugar exporter competing with US products across Asian and African markets.",
+   affects:"Rice · Sugar", upIsBullish:false},
+  // Other
+  {pair:"USD/ZAR", name:"South African Rand", fredId:"DEXSFUS",  group:"Other",
+   relevance:"South Africa is a major white maize producer. Weak ZAR makes SA maize exports cheap, displacing US corn in African markets.",
+   affects:"Corn", upIsBullish:false},
 ];
 
 // Used as static fallback and for the home page summary widget
 const CURRENCIES_DATA = CURRENCIES_META.map(m=>({
-  ...m, value:null, change:null, pct:null,
+  ...m, value:null, change:null, pct:null, live:false,
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -166,52 +213,27 @@ async function fetchWeatherData() {
   });
 }
 
-function calcDXY(r) {
-  // Official DXY formula: weighted geometric mean against 6 currencies
-  return 50.14348112
-    * Math.pow(1/r.eur, 0.576)
-    * Math.pow(r.jpy,   0.136)
-    * Math.pow(1/r.gbp, 0.119)
-    * Math.pow(r.cad,   0.091)
-    * Math.pow(r.sek,   0.042)
-    * Math.pow(r.chf,   0.036);
-}
-
 async function fetchCurrenciesData() {
-  const BASE = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api";
-  // Get today and yesterday for % change
-  const [today, yesterday] = await Promise.all([
-    fetch(`${BASE}@latest/v1/currencies/usd.json`).then(r=>r.json()).catch(()=>null),
-    fetch(`${BASE}@${(() => { const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })()}/v1/currencies/usd.json`).then(r=>r.json()).catch(()=>null),
-  ]);
-
-  if (!today) {
-    console.error("Currency fetch failed");
-    return CURRENCIES_META.map(m=>({...m, value:null, change:null, pct:null}));
-  }
-
-  const t = today.usd;
-  const y = yesterday?.usd;
-
-  const calc = (val, prevVal) => {
-    if (val == null) return { value: null, change: null, pct: null };
-    const change = prevVal != null ? val - prevVal : null;
-    const pct    = prevVal != null && prevVal !== 0 ? (change / prevVal) * 100 : null;
-    return { value: parseFloat(val.toFixed(4)), change, pct };
-  };
-
-  const dxyNow  = t ? calcDXY(t) : null;
-  const dxyPrev = y ? calcDXY(y) : null;
-
-  const lookup = {
-    "DXY":     calc(dxyNow, dxyPrev),
-    "BRL/USD": calc(t?.brl ? 1/t.brl : null, y?.brl ? 1/y.brl : null),
-    "ARS/USD": calc(t?.ars ? 1/t.ars : null, y?.ars ? 1/y.ars : null),
-    "EUR/USD": calc(t?.eur ? 1/t.eur : null, y?.eur ? 1/y.eur : null),
-    "AUD/USD": calc(t?.aud ? 1/t.aud : null, y?.aud ? 1/y.aud : null),
-  };
-
-  return CURRENCIES_META.map(m => ({ ...m, ...lookup[m.pair] }));
+  const results = await Promise.all(
+    CURRENCIES_META.map(m =>
+      fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${m.fredId}`)
+        .then(r => r.ok ? r.text() : null)
+        .catch(() => null)
+    )
+  );
+  return CURRENCIES_META.map((m, i) => {
+    const text = results[i];
+    if (!text) return { ...m, value: null, change: null, pct: null, live: false };
+    const rows = text.trim().split('\n').slice(1)
+      .map(row => { const v = parseFloat(row.split(',')[1]); return isNaN(v) ? null : v; })
+      .filter(v => v !== null);
+    if (!rows.length) return { ...m, value: null, change: null, pct: null, live: false };
+    const current = rows[rows.length - 1];
+    const prev = rows.length > 1 ? rows[rows.length - 2] : null;
+    const change = prev !== null ? current - prev : null;
+    const pct = prev !== null && prev !== 0 ? (change / prev) * 100 : null;
+    return { ...m, value: parseFloat(current.toFixed(4)), change, pct, live: true };
+  });
 }
 
 const WASDE_DATA = {
@@ -1514,35 +1536,141 @@ function WeatherTab(){
 function CurrenciesTab(){
   const [currData,setCurrData]=useState(CURRENCIES_DATA);
   const [loading,setLoading]=useState(true);
+  const anyLive=currData.some(c=>c.live);
+
   useEffect(()=>{
-    fetchCurrenciesData().then(data=>{setCurrData(data);setLoading(false);}).catch(()=>setLoading(false));
+    let cancelled=false;
+    function load(){
+      fetchCurrenciesData().then(data=>{if(!cancelled){setCurrData(data);setLoading(false);}}).catch(()=>{if(!cancelled)setLoading(false);});
+    }
+    load();
+    const iv=setInterval(load,300000);
+    return()=>{cancelled=true;clearInterval(iv);};
   },[]);
-  return (
-    <div>
-      <SectionHead label="CURRENCIES & AG EXPORT IMPACT" sub={loading?"Loading live rates…":"Live rates · Updates every 5 min"}/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10,marginBottom:22}}>
-        {currData.map((c,i)=>(
-          <Card key={i} style={{borderTop:`3px solid ${c.bull?C.eucalyptus:C.negative}`,padding:16}}>
-            <div style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:4}}>{c.name}</div>
-            <div style={{color:C.navy,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.1em",marginBottom:6}}>{c.pair}</div>
-            <div style={{color:C.charcoal,fontSize:24,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:3}}>{c.value!==null?c.value:"—"}</div>
-            <div style={{color:c.pct!=null&&c.pct>0?(c.pair==="DXY"?C.negative:C.eucalyptus):C.eucalyptus,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:10}}>{c.pct!=null?(c.pct>0?"+":"")+c.pct.toFixed(2)+"%":"—"}</div>
-            <div style={{color:C.charcoal,fontSize:11,padding:"6px 9px",background:c.bull?C.eucalyptusPale:C.negativePale,borderRadius:2,borderLeft:`3px solid ${c.bull?C.eucalyptus:C.negative}`,marginBottom:8}}>{c.impact}</div>
-            <a href="https://github.com/fawazahmed0/exchange-api" target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none"}}>Source: Exchange API →</a>
-          </Card>
-        ))}
-      </div>
-      <Card style={{padding:20}}>
-        <SectionHead label="HOW CURRENCIES MOVE AG MARKETS"/>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-          {[{t:"Strong USD → Bearish Grains",d:"US exports become more expensive for foreign buyers. They shift purchases to Brazil, Argentina or EU — reducing US demand and pushing prices lower. Watch DXY weekly: above 105 starts to bite on export competitiveness."},{t:"Weak BRL → More Brazil Competition",d:"Brazilian farmers receive more local currency per USD sold, incentivising selling. The most important currency relationship for soybean traders — Brazil is the world's largest soy exporter."},{t:"Weak ARS → Argentina Selling Flood",d:"Argentine farmers hoard grain as an inflation hedge. 'Soy dollar' programs that force selling flood the market — highly bearish soy meal and soybeans globally."},{t:"Watch Export Sales Every Thursday",d:"USDA export sales (Thursday 7:30am CT) shows actual weekly new sales commitments. If USD strength or competitor supply is hurting US exports, you'll see it here first."}].map((item,i)=>(
-            <div key={i} style={{borderLeft:`3px solid ${C.wheat}`,paddingLeft:14}}>
-              <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:5}}>{item.t}</div>
-              <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6}}>{item.d}</div>
-            </div>
-          ))}
+
+  const GROUPS=["Major","South America","Asia Pacific","Other"];
+
+  function CurrCard({c}){
+    const hasData=c.value!==null;
+    // Is the current move bullish or bearish for US Ag?
+    const moveIsGood=c.pct!=null&&((c.pct>0&&c.upIsBullish)||(c.pct<0&&!c.upIsBullish));
+    const moveColor=c.pct==null?C.wheatDark:moveIsGood?C.eucalyptus:C.negative;
+    const accentColor=moveIsGood?C.eucalyptus:C.negative;
+    const bgPale=moveIsGood?C.eucalyptusPale:c.pct==null?"#f7f5f0":C.negativePale;
+
+    // Format display value — JPY/IDR/ARS bigger numbers get fewer decimals
+    const fmt=v=>{
+      if(v===null) return "—";
+      if(v>=100) return v.toFixed(2);
+      if(v>=10)  return v.toFixed(3);
+      return v.toFixed(4);
+    };
+
+    return (
+      <Card style={{borderTop:`3px solid ${hasData?accentColor:C.lightGrey}`,padding:16,display:"flex",flexDirection:"column",gap:0}}>
+        {/* Header row */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+          <div>
+            <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:"0.08em",marginBottom:2}}>{c.name}</div>
+            <div style={{color:C.charcoal,fontSize:15,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.1em"}}>{c.pair}</div>
+          </div>
+          <span style={{fontSize:8,fontFamily:"'DM Mono',monospace",padding:"2px 6px",borderRadius:2,fontWeight:600,letterSpacing:"0.06em",
+            background:c.live?"#e8f4ee":"#f0f0f0",color:c.live?C.eucalyptus:"#999"}}>
+            {c.live?"● LIVE":"○ SIM"}
+          </span>
+        </div>
+
+        {/* Rate */}
+        <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:8}}>
+          <span style={{color:C.charcoal,fontSize:26,fontFamily:"'DM Mono',monospace",fontWeight:700,lineHeight:1}}>{fmt(c.value)}</span>
+          {c.pct!=null&&(
+            <span style={{color:moveColor,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
+              {c.pct>=0?"+":""}{c.pct.toFixed(2)}%
+            </span>
+          )}
+        </div>
+
+        {/* Change */}
+        {c.change!=null&&(
+          <div style={{color:moveColor,fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:10}}>
+            {c.change>=0?"+":""}{c.change.toFixed(4)} day change
+          </div>
+        )}
+
+        {/* Relevance */}
+        <div style={{fontSize:11,fontFamily:"'IBM Plex Sans',sans-serif",lineHeight:1.55,color:C.charcoal,padding:"8px 10px",background:bgPale,borderLeft:`3px solid ${hasData?accentColor:C.lightGrey}`,borderRadius:2,marginBottom:8,flex:1}}>
+          {c.relevance}
+        </div>
+
+        {/* Affects + source */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.wheatDark,letterSpacing:"0.05em"}}>{c.affects}</span>
+          <a href={`https://fred.stlouisfed.org/series/${c.fredId}`} target="_blank" rel="noopener noreferrer"
+            style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none"}}
+            onMouseEnter={e=>e.target.style.textDecoration="underline"}
+            onMouseLeave={e=>e.target.style.textDecoration="none"}>
+            FRED →
+          </a>
         </div>
       </Card>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <SectionHead label="CURRENCIES & AG EXPORT IMPACT"
+          sub={loading?"Fetching FRED data…":anyLive?"Live rates from FRED · Updates every 5 min":"Simulated — FRED unavailable (CORS)"}/>
+        {!loading&&(
+          <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",padding:"3px 9px",borderRadius:2,
+            background:anyLive?"#e8f4ee":"#f0f0f0",color:anyLive?C.eucalyptus:"#999",fontWeight:600,letterSpacing:"0.06em",flexShrink:0,marginTop:2}}>
+            {anyLive?"● FRED LIVE":"○ SIMULATED"}
+          </span>
+        )}
+      </div>
+
+      {loading&&(
+        <div style={{color:C.wheatDark,fontSize:12,fontFamily:"'DM Mono',monospace",padding:"32px 0",textAlign:"center"}}>
+          Fetching 16 currency pairs from FRED…
+        </div>
+      )}
+
+      {!loading&&GROUPS.map(group=>{
+        const cards=currData.filter(c=>c.group===group);
+        if(!cards.length) return null;
+        return (
+          <div key={group} style={{marginBottom:28}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+              <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.12em",color:C.wheatDark}}>{group.toUpperCase()}</span>
+              <div style={{flex:1,height:1,background:C.lightGrey}}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+              {cards.map((c,i)=><CurrCard key={i} c={c}/>)}
+            </div>
+          </div>
+        );
+      })}
+
+      {!loading&&(
+        <Card style={{padding:20,marginTop:8}}>
+          <SectionHead label="HOW CURRENCIES MOVE AG MARKETS"/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:18}}>
+            {[
+              {t:"Strong DXY → Bearish All US Grains",d:"US exports become more expensive for every foreign buyer. Demand shifts to Brazil, Argentina and EU — reducing US market share. Watch DXY weekly: sustained moves above 105 meaningfully hurt export competitiveness."},
+              {t:"Weak BRL → Brazil Flooding Markets",d:"Brazilian farmers receive more reais per tonne sold. This incentivises aggressive selling. The most important single currency relationship for soybean traders — Brazil ships over 50% of world soy."},
+              {t:"Weak ARS → Argentine Meal Pressure",d:"Argentina is the world's largest meal exporter. Chronic peso devaluation forces farmer selling. 'Soy dollar' programs that compel grain selling are highly bearish global soy meal."},
+              {t:"Weak CNY → China Buys Less",d:"China is the #1 buyer of US soybeans. When yuan weakens against USD, US prices rise in yuan terms. China may delay purchases, cancel cargoes or shift to Brazil. Watch USD/CNY closely around WASDE."},
+              {t:"Weak Importer Currencies → Demand Destruction",d:"Rising USD/IDR, USD/INR, USD/THB all raise the local cost of USD-priced grain. Sustained weakness reduces import budgets across the Asia-Pacific, the world's largest import region."},
+              {t:"Monitor Export Sales Each Thursday",d:"USDA Export Sales (7:30am CT) shows weekly new commitments. Currency moves often show up here first — a sharp USD rally followed by weak export sales confirms the demand destruction thesis."},
+            ].map((item,i)=>(
+              <div key={i} style={{borderLeft:`3px solid ${C.wheat}`,paddingLeft:14}}>
+                <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:5,fontFamily:"'IBM Plex Sans',sans-serif"}}>{item.t}</div>
+                <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6,fontFamily:"'IBM Plex Sans',sans-serif"}}>{item.d}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
