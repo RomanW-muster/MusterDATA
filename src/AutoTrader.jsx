@@ -77,14 +77,13 @@ function genPriceHistory(base, days=30, vol=0.008) {
 }
 
 // ─── SHARED UI ────────────────────────────────────────────────────────────────
-function Card({children,style={},...r}){ return <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,...style}} {...r}>{children}</div>; }
+function Card({children,style={},...r}){ return <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,display:"flex",flexDirection:"column",...style}} {...r}>{children}</div>; }
 function SectionHead({label,sub,action}){
   return (
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:14}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <div style={{width:3,height:16,background:C.eucalyptus,borderRadius:2}}/>
         <div>
-          <div style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em"}}>{label}</div>
+          <span style={{background:"#2F4F3E",color:"#ffffff",padding:"4px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:"0.12em",fontWeight:600,display:"inline-block",marginBottom:12}}>{label}</span>
           {sub&&<div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",marginTop:1}}>{sub}</div>}
         </div>
       </div>
@@ -208,7 +207,7 @@ Rules:
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 function generateLesson(scorecardData, signal, inst) {
   if (!scorecardData) return "";
-  const vars = scorecardData.vars;
+  const vars = scorecardData.vars ?? {};
   const bullish = Object.values(vars).filter(v=>v==="BULLISH").length;
   const bearish = Object.values(vars).filter(v=>v==="BEARISH").length;
   const bullVars = Object.entries(vars).filter(([,v])=>v==="BULLISH").map(([k])=>k.toUpperCase());
@@ -429,7 +428,7 @@ export default function AutoTrader() {
         positions: [...prev.positions, newPosition],
         lastSignalTime: new Date(),
       }));
-      addLog(`✅ EXECUTED: ${signal.action} ${contracts}x ${inst.symbol} @ ${currentPrice.toFixed(4)} | SL: ${signal.stopLoss.toFixed(4)} | TP: ${signal.takeProfit.toFixed(4)} | Confidence: ${signal.confidence}%`, "success");
+      addLog(`✅ EXECUTED: ${signal.action} ${contracts}x ${inst.symbol} @ ${currentPrice.toFixed(4)} | SL: ${(signal.stopLoss??0).toFixed(4)} | TP: ${(signal.takeProfit??0).toFixed(4)} | Confidence: ${signal.confidence}%`, "success");
       addLog(`   Reasoning: ${signal.reasoning}`, "reasoning");
       logSignal(inst, signal, true, currentPrice);
     }
@@ -659,7 +658,7 @@ export default function AutoTrader() {
               {isRunning && scanningSymbol && <div style={{color:C.warning,fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:6,animation:"blink 1s infinite"}}>🔍 Analysing {scanningSymbol}...</div>}
             </Card>
           ) : (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10,alignItems:"stretch"}}>
               {portfolio.positions.map(pos=>{
                 const up=pos.unrealisedPnL>=0;
                 const cur=prices[pos.symbol]?.current||pos.entryPrice;
@@ -768,7 +767,7 @@ export default function AutoTrader() {
           <SectionHead label="MARKET SCANNER" sub="Claude analyses each instrument and generates BUY/SELL/HOLD signals with confidence scores"
             action={<Btn onClick={runScan} disabled={!!scanningSymbol||portfolio.halted} style={{padding:"7px 14px"}}>{scanningSymbol?<><Spinner/>SCANNING {scanningSymbol}...</>:"🔍 RUN FULL SCAN"}</Btn>}
           />
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10,marginBottom:16,alignItems:"stretch"}}>
             {INSTRUMENTS.map(inst=>{
               const sig=SIGNAL_DATA[inst.symbol];
               const cur=prices[inst.symbol]?.current||inst.price;

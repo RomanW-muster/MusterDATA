@@ -345,14 +345,13 @@ function generateSignals(ohlc) {
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED UI COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
-function Card({children,style={},...r}){ return <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,...style}} {...r}>{children}</div>; }
+function Card({children,style={},...r}){ return <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,display:"flex",flexDirection:"column",...style}} {...r}>{children}</div>; }
 function SectionHead({label,sub,action}){
   return (
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:12}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <div style={{width:3,height:16,background:C.eucalyptus,borderRadius:2}}/>
         <div>
-          <div style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em"}}>{label}</div>
+          <span style={{background:"#2F4F3E",color:"#ffffff",padding:"4px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:"0.12em",fontWeight:600,display:"inline-block"}}>{label}</span>
           {sub&&<div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",marginTop:1}}>{sub}</div>}
         </div>
       </div>
@@ -613,7 +612,7 @@ function Backtesting(){
 
       {ran&&results&&(
         <div style={{animation:"fadeIn 0.3s ease"}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:20,alignItems:"stretch"}}>
             {[
               {l:"TOTAL TRADES",   v:results.total,           c:C.navy},
               {l:"WIN RATE",       v:`${results.winRate.toFixed(1)}%`, c:results.winRate>=50?C.eucalyptus:C.negative},
@@ -764,7 +763,7 @@ function HomePage(){
         {sectors.map(sector=>(
           <div key={sector} style={{marginBottom:14}}>
             <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:"0.14em",marginBottom:8}}>{sector.toUpperCase()}</div>
-            <div style={{display:"grid",gridTemplateColumns:`repeat(${COMMODITIES.filter(c=>c.sector===sector).length},1fr)`,gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:`repeat(${COMMODITIES.filter(c=>c.sector===sector).length},1fr)`,gap:10,alignItems:"stretch"}}>
               {COMMODITIES.filter(c=>c.sector===sector).map(c=>{
                 const p=PRICES[c.symbol]; const up=p.pct>=0; const sig=SIGNALS[c.symbol];
                 return (
@@ -798,7 +797,7 @@ function HomePage(){
       {/* Scorecard strip */}
       <div style={{marginBottom:28}}>
         <SectionHead label="SIGNAL SCORECARD" sub="Multi-variable model · 6 commodities"/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10,alignItems:"stretch"}}>
           {COMMODITIES.map(c=>{
             const s=SIGNALS[c.symbol]; const sc=s.score>=65?C.eucalyptus:s.score>=45?C.warning:C.negative;
             return (
@@ -815,37 +814,36 @@ function HomePage(){
       </div>
 
       {/* Bottom: News + Sidebar */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24}}>
+      <div style={{display:"grid",gridTemplateColumns:"1.4fr 0.8fr",gap:20,alignItems:"start"}}>
 
         {/* Top 5 news */}
         <div>
           <SectionHead label="TOP STORIES" sub="Click headline to read full article"/>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {NEWS.slice(0,5).map(n=>(
-              <Card key={n.id} style={{borderLeft:`3px solid ${n.bullish?C.eucalyptus:C.negative}`,padding:"13px 16px"}}
+              <Card key={n.id} style={{borderLeft:`3px solid ${n.bullish?C.eucalyptus:C.negative}`,padding:"13px 16px",display:"flex",flexDirection:"column"}}
                 onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.07)"}
                 onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
                 <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
                   <span style={{fontSize:9,padding:"2px 6px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:600,color:C.white,background:n.bullish?C.eucalyptus:C.negative,flexShrink:0}}>{n.tag}</span>
                   {n.hot&&<span style={{color:C.warning,fontSize:10}}>🔥</span>}
                   <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>{n.time}</span>
-                  <span style={{flex:1}}/>
-                  <a href={n.url} target="_blank" rel="noopener noreferrer"
-                    style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none",flexShrink:0}}
-                    onMouseEnter={e=>e.target.style.textDecoration="underline"}
-                    onMouseLeave={e=>e.target.style.textDecoration="none"}>{n.source} →</a>
                 </div>
                 <a href={n.url} target="_blank" rel="noopener noreferrer"
-                  style={{color:C.charcoal,fontSize:13,lineHeight:1.55,textDecoration:"none",display:"block",fontFamily:"'Lora',serif",fontWeight:500}}
+                  style={{color:C.charcoal,fontSize:13,lineHeight:1.55,textDecoration:"none",display:"block",fontFamily:"'Lora',serif",fontWeight:500,flex:1}}
                   onMouseEnter={e=>e.target.style.color=C.eucalyptus}
                   onMouseLeave={e=>e.target.style.color=C.charcoal}>{n.headline}</a>
+                <a href={n.url} target="_blank" rel="noopener noreferrer"
+                  style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none",marginTop:"auto",paddingTop:8,alignSelf:"flex-end"}}
+                  onMouseEnter={e=>e.target.style.textDecoration="underline"}
+                  onMouseLeave={e=>e.target.style.textDecoration="none"}>{n.source} →</a>
               </Card>
             ))}
           </div>
         </div>
 
         {/* Right sidebar */}
-        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
 
           {/* Upcoming reports */}
           <div>
@@ -872,7 +870,7 @@ function HomePage(){
           {/* Weather alerts — severe & moderate only */}
           <div>
             <SectionHead label="WEATHER ALERTS" sub="Severe & moderate regions"/>
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>
               {alertRegions.length===0&&(
                 <Card style={{padding:"10px 14px"}}>
                   <span style={{color:C.eucalyptus,fontSize:11,fontFamily:"'DM Mono',monospace"}}>✓ No severe or moderate alerts</span>
@@ -882,16 +880,14 @@ function HomePage(){
                 const col=w.severity==="severe"?C.negative:C.warning;
                 const bull=w.impact.toLowerCase().startsWith("bull");
                 return (
-                  <Card key={i} style={{padding:"10px 14px",borderLeft:`3px solid ${col}`,display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{fontSize:18,flexShrink:0}}>{w.icon}</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-                        <span style={{color:C.charcoal,fontSize:11,fontWeight:600}}>{w.region}</span>
-                        <span style={{color:col,fontSize:8,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.06em"}}>{w.severity.toUpperCase()}</span>
-                      </div>
-                      <div style={{color:C.charcoal,fontSize:10,lineHeight:1.35}}>{w.detail}</div>
+                  <Card key={i} style={{padding:"10px 14px",borderLeft:`3px solid ${col}`,display:"flex",flexDirection:"column",minHeight:120}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                      <span style={{fontSize:16,flexShrink:0}}>{w.icon}</span>
+                      <span style={{color:C.charcoal,fontSize:11,fontWeight:600}}>{w.region}</span>
+                      <span style={{color:col,fontSize:8,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.06em"}}>{w.severity.toUpperCase()}</span>
                     </div>
-                    <span style={{color:bull?C.eucalyptus:C.negative,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,flexShrink:0}}>{w.impact}</span>
+                    <div style={{color:C.charcoal,fontSize:10,lineHeight:1.35,flex:1}}>{w.detail}</div>
+                    <span style={{color:bull?C.eucalyptus:C.negative,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:8}}>{w.impact}</span>
                   </Card>
                 );
               })}
@@ -916,16 +912,18 @@ function HomePage(){
                 const moveIsGood=c.pct!=null&&((c.pct>0&&c.upIsBullish)||(c.pct<0&&!c.upIsBullish));
                 const moveColor=c.pct==null?C.wheatDark:moveIsGood?C.eucalyptus:C.negative;
                 return (
-                  <Card key={i} style={{padding:"11px 14px",display:"flex",alignItems:"center",gap:12,borderLeft:`3px solid ${hasData?(moveIsGood?C.eucalyptus:C.negative):C.lightGrey}`}}>
-                    <div style={{minWidth:62}}>
-                      <div style={{color:C.charcoal,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{c.pair}</div>
-                      <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",marginTop:1}}>{c.name}</div>
+                  <Card key={i} style={{padding:"11px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",borderLeft:`3px solid ${hasData?(moveIsGood?C.eucalyptus:C.negative):C.lightGrey}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                      <div>
+                        <div style={{color:C.charcoal,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{c.pair}</div>
+                        <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",marginTop:1}}>{c.name}</div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{color:C.charcoal,fontSize:15,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{hasData?c.value:"—"}</div>
+                        {c.pct!=null&&<div style={{color:moveColor,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{c.pct>=0?"+":""}{c.pct.toFixed(2)}%</div>}
+                      </div>
                     </div>
-                    <div style={{minWidth:56}}>
-                      <div style={{color:C.charcoal,fontSize:15,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{hasData?c.value:"—"}</div>
-                      {c.pct!=null&&<div style={{color:moveColor,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{c.pct>=0?"+":""}{c.pct.toFixed(2)}%</div>}
-                    </div>
-                    <div style={{flex:1,fontSize:10,fontFamily:"'IBM Plex Sans',sans-serif",color:C.charcoal,lineHeight:1.4}}>{(c.relevance||'').split('.')[0]}.</div>
+                    <div style={{fontSize:10,fontFamily:"'IBM Plex Sans',sans-serif",color:C.charcoal,lineHeight:1.4}}>{(c.relevance||'').split('.')[0]}.</div>
                   </Card>
                 );
               })}
@@ -1094,7 +1092,7 @@ function Scorecard(){
   return (
     <div>
       <SectionHead label="COMMODITY SCORECARD" sub="Multi-variable signal model — weighted across all key drivers"/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:22}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:22,alignItems:"stretch"}}>
         {COMMODITIES.map(c=>{const d=SIGNALS[c.symbol]; const isActive=active===c.symbol; return (
           <Card key={c.symbol} onClick={()=>setActive(c.symbol)} style={{padding:14,cursor:"pointer",border:`2px solid ${isActive?C.eucalyptus:C.lightGrey}`,transition:"all 0.2s",boxShadow:isActive?"0 2px 12px rgba(47,79,62,0.15)":"none"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:18}}>{c.emoji}</span><span style={{color:C.charcoal,fontSize:13,fontWeight:600}}>{c.name}</span></div><SignalPill signal={d.overall} size="lg"/></div>
@@ -1161,7 +1159,7 @@ function Portfolio(){
         <SectionHead label="PORTFOLIO TRACKER" sub="Track open positions against model signals · Simulated P&L"/>
         <button onClick={()=>setShowAdd(!showAdd)} style={{background:C.eucalyptus,color:C.white,border:"none",borderRadius:3,padding:"7px 14px",cursor:"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:18}}>+ NEW POSITION</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20,alignItems:"stretch"}}>
         {[{l:"OPEN POSITIONS",v:open.length,c:C.navy},{l:"OPEN P&L (SIM)",v:`${totalOpenPnL>=0?"+":""}$${Math.abs(totalOpenPnL).toFixed(0)}`,c:totalOpenPnL>=0?C.eucalyptus:C.negative},{l:"CLOSED P&L (SIM)",v:`${totalClosedPnL>=0?"+":""}$${Math.abs(totalClosedPnL).toFixed(0)}`,c:totalClosedPnL>=0?C.eucalyptus:C.negative},{l:"WIN RATE",v:closed.length>0?`${Math.round(closed.filter(p=>p.closePnl>0).length/closed.length*100)}%`:"—",c:C.charcoal}].map((s,i)=>(
           <Card key={i} style={{padding:14}}><div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",marginBottom:5}}>{s.l}</div><div style={{color:s.c,fontSize:22,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{s.v}</div></Card>
         ))}
@@ -1248,7 +1246,7 @@ function AgEquities(){
       <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
         {sectors.map(s=><button key={s} onClick={()=>setSector(s)} style={{background:sector===s?C.navy:C.white,color:sector===s?C.white:C.charcoal,border:`1px solid ${sector===s?C.navy:C.lightGrey}`,borderRadius:3,padding:"6px 14px",cursor:"pointer",fontSize:11,fontFamily:"'DM Mono',monospace"}}>{s}</button>)}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12,marginBottom:22}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12,marginBottom:22,alignItems:"stretch"}}>
         {filtered.map(eq=>{const up=eq.pct>=0;return(
           <Card key={eq.ticker} style={{padding:18,transition:"box-shadow 0.2s"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.10)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
@@ -1310,7 +1308,7 @@ function Education(){
   return (
     <div>
       <SectionHead label="EDUCATION CENTRE" sub="Structured learning for new commodity traders"/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12,marginBottom:26}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12,marginBottom:26,alignItems:"stretch"}}>
         {EDU_MODULES.map(mod=>(
           <Card key={mod.id} onClick={()=>{setActiveMod(mod.id);setActiveSec(0);}} style={{padding:18,cursor:"pointer",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.10)";e.currentTarget.style.borderColor=C.eucalyptus;}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=C.lightGrey;}}>
             <div style={{fontSize:26,marginBottom:8}}>{mod.emoji}</div>
@@ -1371,7 +1369,7 @@ function TradeJournal(){
         <SectionHead label="TRADE JOURNAL" sub="Log your thinking · Track your calls · Learn from every trade"/>
         <button onClick={()=>setShowAdd(!showAdd)} style={{background:C.eucalyptus,color:C.white,border:"none",borderRadius:3,padding:"7px 14px",cursor:"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:18}}>+ NEW ENTRY</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20,alignItems:"stretch"}}>
         {[{l:"TOTAL TRADES",v:entries.length,c:C.navy},{l:"WIN RATE",v:entries.filter(e=>e.result!=="open").length>0?`${Math.round(wins/(wins+losses)*100)}%`:"—",c:C.eucalyptus},{l:"TOTAL SIM P&L",v:`${totalPnl>=0?"+":""}$${Math.abs(totalPnl).toLocaleString()}`,c:totalPnl>=0?C.eucalyptus:C.negative},{l:"OPEN TRADES",v:entries.filter(e=>e.result==="open").length,c:C.wheat}].map((s,i)=>(
           <Card key={i} style={{padding:14}}><div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",marginBottom:5}}>{s.l}</div><div style={{color:s.c,fontSize:22,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{s.v}</div></Card>
         ))}
@@ -1498,7 +1496,7 @@ function WeatherTab(){
   return (
     <div>
       <SectionHead label="GLOBAL AG WEATHER MONITOR" sub={loading?"Loading live data from Open-Meteo…":"Live data · Open-Meteo · Updates every 5 min"}/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:10,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:10,marginBottom:20,alignItems:"stretch"}}>
         {weatherData.map((w,i)=>{const col=w.severity==="severe"?C.negative:w.severity==="moderate"?C.warning:C.eucalyptus; return(
           <Card key={i} style={{borderLeft:`4px solid ${col}`,padding:16}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:22}}>{w.icon}</span><span style={{fontSize:9,padding:"2px 8px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:col,background:C.eggshell,border:`1px solid ${col}`}}>{w.severity.toUpperCase()}</span></div>
@@ -1648,7 +1646,7 @@ function CurrenciesTab(){
               <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.12em",color:C.wheatDark}}>{group.toUpperCase()}</span>
               <div style={{flex:1,height:1,background:C.lightGrey}}/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10,alignItems:"stretch"}}>
               {cards.map((c,i)=><CurrCard key={i} c={c}/>)}
             </div>
           </div>

@@ -330,14 +330,13 @@ const AU_EXPORTS = {
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED UI
 // ─────────────────────────────────────────────────────────────────────────────
-function Card({children,style={},...r}){ return <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,...style}} {...r}>{children}</div>; }
+function Card({children,style={},...r}){ return <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,display:"flex",flexDirection:"column",...style}} {...r}>{children}</div>; }
 function SectionHead({label,sub,action}){
   return (
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:12}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <div style={{width:3,height:16,background:C.auGold,borderRadius:2}}/>
         <div>
-          <div style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em"}}>{label}</div>
+          <span style={{background:"#2F4F3E",color:"#ffffff",padding:"4px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:"0.12em",fontWeight:600,display:"inline-block",marginBottom:12}}>{label}</span>
           {sub&&<div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",marginTop:1}}>{sub}</div>}
         </div>
       </div>
@@ -375,7 +374,7 @@ function AUGrainPrices(){
         ))}
       </div>
       {/* Port prices grid */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:10,marginBottom:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:10,marginBottom:14,alignItems:"stretch"}}>
         {Object.entries(grain.ports).map(([port,data])=>{
           const up=data.pct>=0;
           return (
@@ -407,7 +406,7 @@ function AUPulsePrices(){
   return (
     <div style={{marginBottom:28}}>
       <SectionHead label="PULSE PRICES (AUD/TONNE)" sub="Simulated · Grain Central / GRDC hook ready"/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10,alignItems:"stretch"}}>
         {AU_PULSE_PRICES.map(p=>{
           const up=p.pct>=0;
           return (
@@ -442,7 +441,7 @@ function AULivestockIndicators(){
           <button key={a.id} onClick={()=>setActiveAnimal(a.id)} style={{background:activeAnimal===a.id?C.eucalyptus:C.white,color:activeAnimal===a.id?C.white:C.charcoal,border:`1px solid ${activeAnimal===a.id?C.eucalyptus:C.lightGrey}`,borderRadius:3,padding:"7px 16px",cursor:"pointer",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:500}}>{a.label}</button>
         ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12,marginBottom:10}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12,marginBottom:10,alignItems:"stretch"}}>
         {displayed.map(l=>{
           const up=l.pct>=0; const vsAvg=((l.value-l.fiveYrAvg)/l.fiveYrAvg*100).toFixed(1);
           return (
@@ -656,7 +655,7 @@ function AUSeasonalCalendar(){
   return (
     <div style={{marginBottom:28}}>
       <SectionHead label="AUSTRALIAN AG SEASONAL CALENDAR" sub="Key events and price drivers by time of year"/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,alignItems:"stretch"}}>
         {AU_SEASONAL.map((s,i)=>(
           <Card key={i} style={{padding:14,border:`1px solid ${i===currentPeriod?C.auGold:C.lightGrey}`,borderTop:`3px solid ${i===currentPeriod?C.auGold:C.lightGrey}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -739,7 +738,7 @@ function AUDataCosts(){
         {costs.map((r,i)=>(
           <div key={i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 2fr auto",gap:8,padding:"10px 0",borderBottom:`1px solid ${C.lightGrey}`,alignItems:"start"}}>
             <span style={{color:C.charcoal,fontSize:12}}>{r.source}</span>
-            <span style={{color:r.cost==="Free"?C.eucalyptus:r.cost.startsWith("Free")?C.warning:C.negative,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{r.cost}</span>
+            <span style={{color:r.cost==="Free"?C.eucalyptus:(r.cost||'').startsWith("Free")?C.warning:C.negative,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{r.cost}</span>
             <span style={{color:C.wheatDark,fontSize:11,lineHeight:1.4}}>{r.notes}</span>
             <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:10,fontFamily:"'DM Mono',monospace",textDecoration:"none",whiteSpace:"nowrap"}} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>Visit →</a>
           </div>
@@ -809,7 +808,7 @@ export default function AustraliaTab() {
         {section==="overview"&&(
           <div>
             <AUGrainPrices/>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:28}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:28,alignItems:"stretch"}}>
               <div>
                 <SectionHead label="LIVESTOCK SNAPSHOT" sub="MLA indicators"/>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
