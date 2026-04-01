@@ -824,7 +824,7 @@ export default function AutoTrader() {
                 {l:"Risk Per Trade",       v:"Claude-managed (0.5–5%)", note:"Based on signal confidence"},
                 {l:"Stop Loss Method",     v:"ATR-based (0.8% price proxy)", note:"Auto-calculated per instrument"},
                 {l:"Min R:R Ratio",        v:"2:1", note:"TP always 2x the SL distance"},
-              ].map(([l,v,note])=>(
+              ].map(({l,v,note})=>(
                 <div key={l} style={{padding:"8px 0",borderBottom:`1px solid ${C.lightGrey}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{color:C.charcoal,fontSize:12}}>{l}</span><span style={{color:C.navy,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</span></div>
                   <div style={{color:C.wheatDark,fontSize:10}}>{note}</div>

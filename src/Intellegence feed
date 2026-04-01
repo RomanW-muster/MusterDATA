@@ -1,0 +1,673 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// MUSTER — INTELLIGENCE FEED TAB
+// Drop this file into your Muster project as IntelligenceFeed.jsx
+//
+// To add to Muster.jsx:
+//   1. import IntelligenceFeed from "./IntelligenceFeed";
+//   2. Add { id:"intel", label:"INTELLIGENCE", emoji:"🧠" } to TABS array
+//   3. Add {tab==="intel" && <IntelligenceFeed/>} to content section
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useState, useEffect, useRef } from "react";
+
+// ─── COLOURS ─────────────────────────────────────────────────────────────────
+const C = {
+  eucalyptus:"#2F4F3E", eggshell:"#F4F1EA", navy:"#1E2F3F", wheat:"#C8A96A",
+  charcoal:"#2A2A2A", lightGrey:"#D9D9D9",
+  eucalyptusLight:"#3d6b52", eucalyptusPale:"#e8f4ee",
+  navyLight:"#2a4a63", navyPale:"#e8eef4",
+  wheatDark:"#9a7d45", wheatPale:"#fdf6e8",
+  negative:"#8B1A1A", negativePale:"#faeaea",
+  warning:"#c8860a", warningPale:"#fef6e4",
+  white:"#ffffff", offwhite:"#fafaf8",
+};
+
+// ─── CATEGORIES ───────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  "All",
+  "Grains & oilseeds",
+  "Livestock & meat",
+  "Wool & fibre",
+  "Ag finance & equities",
+  "Macro economics & currencies",
+  "Geopolitics & trade policy",
+  "Weather & climate",
+  "Australian domestic Ag",
+];
+
+const CAT_COLOR = {
+  "Grains & oilseeds":           { bg:C.eucalyptusPale, color:C.eucalyptus },
+  "Livestock & meat":            { bg:C.navyPale,       color:C.navy       },
+  "Wool & fibre":                { bg:C.wheatPale,      color:C.wheatDark  },
+  "Ag finance & equities":       { bg:"#f0e8f4",        color:"#5a2d82"    },
+  "Macro economics & currencies":{ bg:"#e8f0f4",        color:"#1a4a6b"    },
+  "Geopolitics & trade policy":  { bg:C.negativePale,   color:C.negative   },
+  "Weather & climate":           { bg:"#e8f4f8",        color:"#1a6b8b"    },
+  "Australian domestic Ag":      { bg:C.warningPale,    color:C.warning    },
+};
+
+// ─── DEFAULT SOURCES ──────────────────────────────────────────────────────────
+const DEFAULT_SOURCES = [
+  { id:1,  name:"Reuters Ag",         url:"https://feeds.reuters.com/reuters/businessNews",                icon:"📰", type:"rss",   active:true,  cat:"Grains & oilseeds"           },
+  { id:2,  name:"USDA News",          url:"https://www.usda.gov/rss/latest-releases.xml",                 icon:"🏛️", type:"rss",   active:true,  cat:"Grains & oilseeds"           },
+  { id:3,  name:"Grain Central",      url:"https://www.graincentral.com/feed/",                           icon:"🌾", type:"rss",   active:true,  cat:"Australian domestic Ag"      },
+  { id:4,  name:"MLA Market News",    url:"https://www.mla.com.au/feed/",                                 icon:"🐄", type:"rss",   active:true,  cat:"Livestock & meat"            },
+  { id:5,  name:"AWEX Wool",          url:"https://www.awex.com.au/feed/",                                icon:"🐑", type:"rss",   active:true,  cat:"Wool & fibre"                },
+  { id:6,  name:"FT Commodities",     url:"https://www.ft.com/commodities?format=rss",                    icon:"💹", type:"rss",   active:true,  cat:"Ag finance & equities"       },
+  { id:7,  name:"AFR Markets",        url:"https://www.afr.com/rss",                                      icon:"📊", type:"rss",   active:false, cat:"Macro economics & currencies" },
+  { id:8,  name:"Bloomberg Ag",       url:"https://feeds.bloomberg.com/markets/news.rss",                 icon:"🔵", type:"rss",   active:false, cat:"Ag finance & equities"       },
+  { id:9,  name:"NOAA Weather",       url:"https://www.noaa.gov/rss.xml",                                 icon:"🌦️", type:"rss",   active:true,  cat:"Weather & climate"           },
+  { id:10, name:"Farm Futures",       url:"https://www.farmfutures.com/rss",                              icon:"🚜", type:"rss",   active:true,  cat:"Grains & oilseeds"           },
+  { id:11, name:"ABARES",             url:"https://www.agriculture.gov.au/abares/rss",                    icon:"🇦🇺", type:"rss",  active:true,  cat:"Australian domestic Ag"      },
+  { id:12, name:"Weekly Times",       url:"https://www.weeklytimesnow.com.au/agribusiness/rss",           icon:"📰", type:"rss",   active:true,  cat:"Australian domestic Ag"      },
+];
+
+// ─── SIMULATED ARTICLES ───────────────────────────────────────────────────────
+const SIMULATED_ARTICLES = [
+  { id:1,  headline:"USDA raises Brazil soybean production estimate to record 169.5 MMT in latest WASDE revision",                      source:"USDA WASDE",     url:"https://www.usda.gov/oce/commodity/wasde/",               time:"2h ago",  category:"Grains & oilseeds",            sentiment:"bearish", relevance:"high",   summary:"Brazil's record crop puts significant downside pressure on US soybean export competitiveness. The 169.5 MMT estimate — up 2.1 MMT from last month — confirms Brazil will dominate global soy trade through mid-2026. Watch for basis widening at US Gulf export terminals and potential USDA export target revisions in the April WASDE." },
+  { id:2,  headline:"Persistent D2–D3 drought deepens across Kansas winter wheat belt ahead of critical spring green-up",                source:"USDA Crop Progress",url:"https://www.nass.usda.gov/",                             time:"3h ago",  category:"Grains & oilseeds",            sentiment:"bullish", relevance:"high",   summary:"This is the most significant near-term bullish catalyst for Chicago wheat. Spring green-up (March–April) is the critical window — if drought continues through this period, yield losses compound quickly. Kansas produces ~30% of US winter wheat. Monitor the Thursday USDA Drought Monitor update closely this week." },
+  { id:3,  headline:"EYCI surges to 748¢ as restocker demand intensifies following improved autumn rainfall forecasts",                   source:"MLA",            url:"https://www.mla.com.au/",                                 time:"3h ago",  category:"Livestock & meat",             sentiment:"bullish", relevance:"high",   summary:"The EYCI breaking above 740¢ is significant — it's now trading 10% above the 5-year average, reflecting genuine tightness in young cattle supply. The autumn break outlook is the key driver: if rain materialises in March–April, restockers will aggressively bid for cattle, pushing the EYCI potentially to 780–800¢." },
+  { id:4,  headline:"Wool EMI lifts 18¢ at Sydney auction — strong Chinese mill buying underpins fine Merino categories",               source:"AWEX",           url:"https://www.awex.com.au/",                                time:"4h ago",  category:"Wool & fibre",                 sentiment:"bullish", relevance:"high",   summary:"Chinese mill restocking ahead of their golden week period is the likely driver. The 18¢ lift on strong volume with passed-in rate just 18.4% suggests genuine demand rather than selective buying. Fine microns (17–19µ) outperformed — watch whether this extends to broader microns next week." },
+  { id:5,  headline:"China cancels 3 US corn cargoes amid escalating trade tensions — demand outlook clouded",                          source:"Reuters Ag",     url:"https://www.reuters.com/business/commodities/",           time:"4h ago",  category:"Geopolitics & trade policy",   sentiment:"bearish", relevance:"high",   summary:"Three cancelled cargoes represents ~180,000 tonnes of demand that needs to find a new buyer or disappear. The broader concern is whether this is isolated or the beginning of a demand shift — China redirecting purchases to Brazil and Ukraine as a political signal. Watch Thursday export sales for confirmation." },
+  { id:6,  headline:"ADM quarterly earnings miss estimates — crush margins compressed by record South American soybean supply",          source:"ADM Investor Relations",url:"https://www.adm.com/investors",                       time:"5h ago",  category:"Ag finance & equities",        sentiment:"bearish", relevance:"medium", summary:"ADM's miss signals that grain merchandisers are feeling margin compression from the oversupplied soybean market. This is a useful leading indicator — when crush margins are tight, processors buy less soybeans, reducing demand support for prices. Watch Bunge earnings next week for confirmation." },
+  { id:7,  headline:"NOAA upgrades La Niña watch — 60% probability of La Niña developing by June–August 2026",                         source:"NOAA CPC",       url:"https://www.cpc.ncep.noaa.gov/",                          time:"6h ago",  category:"Weather & climate",            sentiment:"bullish", relevance:"high",   summary:"La Niña developing by June–August is the most important seasonal weather signal for Ag markets right now. Historical patterns: drier Brazil (bullish soy/corn), drier US Southern Plains (bullish wheat), potentially wetter eastern Australia. This sets the broad weather backdrop for the entire 2026 US crop season." },
+  { id:8,  headline:"Federal Reserve signals two rate cuts in 2026 — USD weakness supportive of US commodity export competitiveness",   source:"FT Markets",     url:"https://www.ft.com/",                                     time:"7h ago",  category:"Macro economics & currencies", sentiment:"bullish", relevance:"medium", summary:"A weaker USD path is structurally bullish for US-denominated commodity exports. Every 1% move lower in DXY makes US grain ~1% cheaper for foreign buyers. Two rate cuts by year-end would be meaningfully dovish for the USD — this is a tailwind for corn, wheat, and soy exports if the signal holds." },
+  { id:9,  headline:"Black Sea corridor tensions resurface — Ukraine reports major infrastructure strikes near Odesa port",              source:"Reuters Ag",     url:"https://www.reuters.com/business/commodities/",           time:"8h ago",  category:"Geopolitics & trade policy",   sentiment:"bullish", relevance:"high",   summary:"Odesa handles ~60% of Ukraine's grain exports. Infrastructure damage removes supply from the market and creates premium for non-Black Sea origins. This is an immediate bullish catalyst for Chicago wheat and corn. These events historically produce sharp short-covering rallies — monitor closely." },
+  { id:10, headline:"Australia WA subsoil moisture at highest level in a decade ahead of 2026 winter crop planting",                    source:"ABARES",         url:"https://www.agriculture.gov.au/abares",                   time:"10h ago", category:"Australian domestic Ag",       sentiment:"bearish", relevance:"medium", summary:"Exceptional subsoil moisture across the WA wheatbelt sets up for a potentially large 2026 winter crop — bearish for AU domestic grain prices but bullish for AU grain exporters (higher volumes). This also incentivises growers to maximise canola area given current prices." },
+  { id:11, headline:"Argentina soy harvest 38% complete — pace running ahead of year-ago levels as dry conditions ease temporarily",    source:"Buenos Aires Grain Exch",url:"https://www.bolsadecereales.com/ingles",             time:"11h ago", category:"Grains & oilseeds",            sentiment:"bearish", relevance:"medium", summary:"Faster-than-expected Argentine harvest progress adds near-term supply pressure to soybean and soy meal markets. Argentina is the world's largest soy meal exporter — any acceleration in their harvest and selling activity directly pressures global meal prices and competes with US soy exports." },
+  { id:12, headline:"Fertiliser prices retreat further as European natural gas softens — input cost relief building for corn growers",   source:"Farm Futures",   url:"https://www.farmfutures.com/markets",                     time:"13h ago", category:"Ag finance & equities",        sentiment:"bullish", relevance:"medium", summary:"Lower fertiliser costs improve farmer margins and incentivise higher planted acreage — particularly for corn which is nitrogen-intensive. This is a medium-term bearish signal for corn prices (more supply coming) but bullish for farmer incomes and Ag input stocks like Nutrien and CF Industries." },
+];
+
+// ─── SHARED UI ────────────────────────────────────────────────────────────────
+function Card({ children, style={}, ...r }) {
+  return <div style={{ background:C.white, border:`1px solid ${C.lightGrey}`, borderRadius:4, ...style }} {...r}>{children}</div>;
+}
+
+function SectionHead({ label, sub, action }) {
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:14 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ width:3, height:16, background:C.eucalyptus, borderRadius:2 }} />
+        <div>
+          <div style={{ color:C.charcoal, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, letterSpacing:"0.12em" }}>{label}</div>
+          {sub && <div style={{ color:C.wheatDark, fontSize:9, fontFamily:"'DM Mono',monospace", marginTop:1 }}>{sub}</div>}
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function Btn({ children, onClick, disabled, variant="green", style={} }) {
+  const bg = disabled ? C.lightGrey : variant==="green" ? C.eucalyptus : variant==="navy" ? C.navy : C.white;
+  const color = variant==="outline" ? C.charcoal : C.white;
+  const border = variant==="outline" ? `1px solid ${C.lightGrey}` : "none";
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      background:bg, color, border, borderRadius:3, padding:"8px 16px",
+      cursor:disabled?"not-allowed":"pointer", fontSize:11,
+      fontFamily:"'DM Mono',monospace", fontWeight:600,
+      transition:"all 0.15s", letterSpacing:"0.04em", ...style,
+    }}
+    onMouseEnter={e=>{ if(!disabled&&variant==="green") e.currentTarget.style.background=C.eucalyptusLight; }}
+    onMouseLeave={e=>{ if(!disabled&&variant==="green") e.currentTarget.style.background=C.eucalyptus; }}
+    >{children}</button>
+  );
+}
+
+function Spinner() {
+  return <span style={{ display:"inline-block", width:12, height:12, border:`2px solid ${C.lightGrey}`, borderTopColor:C.eucalyptus, borderRadius:"50%", animation:"spin 0.8s linear infinite", marginRight:6 }} />;
+}
+
+// ─── ARTICLE CARD ─────────────────────────────────────────────────────────────
+function ArticleCard({ article, onDeepDive }) {
+  const [expanded, setExpanded] = useState(false);
+  const catStyle = CAT_COLOR[article.category] || { bg:C.eggshell, color:C.charcoal };
+  const sentColor = article.sentiment==="bullish" ? C.eucalyptus : article.sentiment==="bearish" ? C.negative : C.warning;
+  const borderColor = article.sentiment==="bullish" ? C.eucalyptus : article.sentiment==="bearish" ? C.negative : C.warning;
+
+  return (
+    <Card style={{ borderLeft:`4px solid ${borderColor}`, padding:"14px 16px", marginBottom:8, transition:"box-shadow 0.15s", cursor:"pointer" }}
+      onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.08)"}
+      onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}
+    >
+      {/* Meta row */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:7, flexWrap:"wrap", gap:6 }}>
+        <div style={{ display:"flex", gap:5, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontSize:9, padding:"2px 7px", borderRadius:2, fontFamily:"'DM Mono',monospace", fontWeight:600, color:catStyle.color, background:catStyle.bg, border:`1px solid ${catStyle.color}22` }}>{article.category}</span>
+          <span style={{ fontSize:9, padding:"2px 6px", borderRadius:2, fontFamily:"'DM Mono',monospace", fontWeight:600, color:C.charcoal, background:C.eggshell, border:`1px solid ${C.lightGrey}` }}>{article.source}</span>
+          <span style={{ fontSize:9, padding:"2px 7px", borderRadius:2, fontFamily:"'DM Mono',monospace", fontWeight:700, color:sentColor, background:`${sentColor}15`, border:`1px solid ${sentColor}33` }}>{article.sentiment.toUpperCase()}</span>
+          {article.relevance==="high" && <span style={{ fontSize:9, padding:"2px 7px", borderRadius:2, fontFamily:"'DM Mono',monospace", fontWeight:700, color:C.eucalyptus, background:C.eucalyptusPale, border:`1px solid ${C.eucalyptus}33` }}>⚡ HIGH RELEVANCE</span>}
+        </div>
+        <span style={{ color:C.lightGrey, fontSize:10, fontFamily:"'DM Mono',monospace", flexShrink:0 }}>{article.time}</span>
+      </div>
+
+      {/* Headline */}
+      <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ color:C.charcoal, fontSize:13, fontWeight:600, lineHeight:1.45, textDecoration:"none", display:"block", marginBottom:10 }}
+        onMouseEnter={e=>e.target.style.color=C.navy}
+        onMouseLeave={e=>e.target.style.color=C.charcoal}
+      >{article.headline}</a>
+
+      {/* Summary */}
+      <div style={{ padding:"10px 12px", background:C.offwhite, borderRadius:3, borderLeft:`2px solid ${C.wheat}`, marginBottom:10 }}>
+        <div style={{ color:C.wheat, fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, letterSpacing:"0.1em", marginBottom:5 }}>◆ WHY THIS MATTERS</div>
+        <div style={{ color:C.charcoal, fontSize:12, lineHeight:1.65 }}>{article.summary}</div>
+      </div>
+
+      {/* Deep dive */}
+      {expanded && article.deepDive && (
+        <div style={{ padding:"10px 12px", background:C.navyPale, borderRadius:3, borderLeft:`2px solid ${C.navy}`, marginBottom:10, animation:"fadeIn 0.3s ease" }}>
+          <div style={{ color:C.navy, fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, letterSpacing:"0.1em", marginBottom:5 }}>◆ DEEP DIVE ANALYSIS</div>
+          <div style={{ color:C.charcoal, fontSize:12, lineHeight:1.65 }}>{article.deepDive}</div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ color:C.wheat, fontSize:10, fontFamily:"'DM Mono',monospace", textDecoration:"none" }}
+          onMouseEnter={e=>e.target.style.textDecoration="underline"}
+          onMouseLeave={e=>e.target.style.textDecoration="none"}
+        >{article.source} →</a>
+        <Btn variant="outline" style={{ fontSize:10, padding:"4px 10px" }}
+          onClick={() => {
+            if (!article.deepDive) { onDeepDive(article.id); setExpanded(true); }
+            else setExpanded(!expanded);
+          }}
+        >
+          {article.deepDive ? (expanded ? "▲ Hide" : "▼ Deep dive") : "◆ Deep dive"}
+        </Btn>
+      </div>
+    </Card>
+  );
+}
+
+// ─── FEED TAB ─────────────────────────────────────────────────────────────────
+function FeedTab({ articles, sources, onDeepDive, onRefresh, loading }) {
+  const [category, setCategory] = useState("All");
+  const filtered = category==="All" ? articles : articles.filter(a=>a.category===category);
+  const high = filtered.filter(a=>a.relevance==="high").length;
+  const bullish = filtered.filter(a=>a.sentiment==="bullish").length;
+  const bearish = filtered.filter(a=>a.sentiment==="bearish").length;
+
+  return (
+    <div>
+      {/* Stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
+        {[
+          { l:"ARTICLES",        v:filtered.length,        c:C.navy       },
+          { l:"HIGH RELEVANCE",  v:high,                   c:C.eucalyptus },
+          { l:"BULLISH SIGNALS", v:bullish,                c:C.eucalyptus },
+          { l:"BEARISH SIGNALS", v:bearish,                c:C.negative   },
+        ].map((s,i)=>(
+          <Card key={i} style={{ padding:"12px 14px" }}>
+            <div style={{ color:C.wheatDark, fontSize:9, fontFamily:"'DM Mono',monospace", letterSpacing:"0.1em", marginBottom:4 }}>{s.l}</div>
+            <div style={{ color:s.c, fontSize:22, fontFamily:"'DM Mono',monospace", fontWeight:700 }}>{s.v}</div>
+          </Card>
+        ))}
+      </div>
+
+      <SectionHead
+        label="FILTERED & SUMMARISED BY CLAUDE"
+        sub={`${sources.filter(s=>s.active).length} active sources · AI assesses relevance and explains why each article matters`}
+        action={
+          <Btn onClick={onRefresh} disabled={loading} style={{ padding:"7px 14px" }}>
+            {loading ? <><Spinner/>FETCHING...</> : "↺ REFRESH FEED"}
+          </Btn>
+        }
+      />
+
+      {/* Category filter pills */}
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16 }}>
+        {CATEGORIES.map(c=>{
+          const count = c==="All" ? articles.length : articles.filter(a=>a.category===c).length;
+          const isActive = category===c;
+          return (
+            <button key={c} onClick={()=>setCategory(c)} style={{
+              padding:"4px 12px", borderRadius:20, fontSize:11,
+              fontFamily:"'DM Mono',monospace", fontWeight:500,
+              cursor:"pointer", border:`1px solid ${isActive?C.eucalyptus:C.lightGrey}`,
+              background: isActive?C.eucalyptus:C.white,
+              color: isActive?C.white:C.wheatDark,
+              transition:"all 0.15s",
+            }}>
+              {c}{c!=="All"&&count>0?` ${count}`:""}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Articles */}
+      {filtered.length===0 ? (
+        <div style={{ textAlign:"center", padding:"40px 20px", color:C.wheatDark }}>
+          <div style={{ fontSize:32, marginBottom:10 }}>📭</div>
+          <div>No articles in this category</div>
+        </div>
+      ) : (
+        filtered.map(a=><ArticleCard key={a.id} article={a} onDeepDive={onDeepDive}/>)
+      )}
+
+      <div style={{ padding:"8px 12px", background:C.offwhite, border:`1px dashed ${C.lightGrey}`, borderRadius:3, marginTop:8 }}>
+        <span style={{ color:C.wheatDark, fontSize:10, fontFamily:"'DM Mono',monospace" }}>
+          ⚡ HOOK: In production, Muster fetches all active RSS feeds via a CORS proxy on page load and every 30 minutes. Claude reads every headline + description, scores relevance 0–10, discards scores below 6, and writes the "Why This Matters" summary for each keeper. Add your NewsAPI key to pull from 80,000+ sources.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── DIGEST TAB ───────────────────────────────────────────────────────────────
+function DigestTab({ articles, sources }) {
+  const [digest, setDigest] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [generated, setGenerated] = useState(false);
+
+  async function generate() {
+    setLoading(true); setDigest(""); setGenerated(false);
+    const articleContext = articles.slice(0,12).map(a =>
+      `- ${a.headline} (${a.source}, ${a.category}, ${a.sentiment}): ${a.summary}`
+    ).join("\n");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514", max_tokens:1000,
+          system:`You are Muster's intelligence analyst writing a daily briefing for a new commodity trader in Australia. Synthesise the provided articles into a structured daily digest. Use this exact format:
+
+☀️ TOP 3 THINGS TO KNOW TODAY
+• [Most important development and why it matters]
+• [Second most important]
+• [Third most important]
+
+📊 BY CATEGORY
+Grains & oilseeds: [1-2 sentences]
+Livestock & meat: [1-2 sentences]
+Wool & fibre: [1-2 sentences]
+Ag finance & equities: [1-2 sentences]
+Macro & currencies: [1-2 sentences]
+Geopolitics: [1-2 sentences]
+Weather: [1-2 sentences]
+Australian Ag: [1-2 sentences]
+
+👁️ WHAT TO WATCH TODAY
+• [Specific report, price level, or event to monitor]
+• [Second thing to watch]
+• [Third thing to watch]
+
+Be direct and specific. Explain the trading implications clearly.`,
+          messages:[{ role:"user", content:`Generate today's daily digest (${new Date().toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}) based on these ${articles.length} articles:\n\n${articleContext}` }]
+        })
+      });
+      const data = await res.json();
+      setDigest(data.content?.map(b=>b.text||"").join("")||"Could not generate digest.");
+      setGenerated(true);
+    } catch { setDigest("Connection error."); }
+    setLoading(false);
+  }
+
+  return (
+    <div>
+      <SectionHead
+        label="DAILY INTELLIGENCE DIGEST"
+        sub="Claude synthesises everything from the last 24hrs into one structured briefing"
+        action={
+          <Btn onClick={generate} disabled={loading} style={{ padding:"7px 14px" }}>
+            {loading ? <><Spinner/>GENERATING...</> : generated ? "↺ REFRESH" : "☀️ GENERATE DIGEST"}
+          </Btn>
+        }
+      />
+
+      {!digest && !loading && (
+        <Card style={{ padding:40, textAlign:"center" }}>
+          <div style={{ fontSize:40, marginBottom:14 }}>📋</div>
+          <div style={{ color:C.charcoal, fontSize:15, fontWeight:700, marginBottom:8 }}>Generate your daily intelligence digest</div>
+          <div style={{ color:C.wheatDark, fontSize:13, lineHeight:1.6, maxWidth:460, margin:"0 auto 20px" }}>
+            Claude reads all {articles.length} articles across your {sources.filter(s=>s.active).length} active sources, identifies the most important themes, and writes a structured briefing explaining what it all means for your Ag and commodity positions.
+          </div>
+          <Btn onClick={generate}>☀️ GENERATE NOW</Btn>
+        </Card>
+      )}
+
+      {loading && (
+        <Card style={{ padding:24 }}>
+          <div style={{ color:C.wheatDark, fontSize:13, fontFamily:"'DM Mono',monospace" }}>
+            <Spinner/>
+            Claude is reading {articles.length} articles across {sources.filter(s=>s.active).length} sources and synthesising your daily briefing...
+          </div>
+        </Card>
+      )}
+
+      {digest && !loading && (
+        <Card style={{ padding:22, borderLeft:`4px solid ${C.wheat}` }}>
+          <div style={{ color:C.charcoal, fontSize:15, fontWeight:700, marginBottom:4 }}>☀️ Muster Daily Intelligence Digest</div>
+          <div style={{ color:C.wheatDark, fontSize:11, fontFamily:"'DM Mono',monospace", marginBottom:16 }}>
+            {new Date().toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · {sources.filter(s=>s.active).length} sources · {articles.length} articles analysed
+          </div>
+          <div style={{ color:C.charcoal, fontSize:13, lineHeight:1.8, whiteSpace:"pre-wrap" }}>{digest}</div>
+          <div style={{ marginTop:16, display:"flex", gap:8 }}>
+            <Btn variant="outline" onClick={generate} style={{ fontSize:10, padding:"6px 12px" }}>↺ Regenerate</Btn>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── SOURCES TAB ──────────────────────────────────────────────────────────────
+function SourcesTab({ sources, onToggle, onAdd, onRemove }) {
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [cat, setCat] = useState("Grains & oilseeds");
+  const active = sources.filter(s=>s.active).length;
+
+  function add() {
+    if (!url) return;
+    onAdd({ id:Date.now(), name: name||url.replace("https://","").split("/")[0], url, icon:"📡", type:"rss", active:true, cat });
+    setName(""); setUrl("");
+  }
+
+  const inputStyle = { padding:"8px 10px", border:`1px solid ${C.lightGrey}`, borderRadius:3, fontSize:12, fontFamily:"'DM Mono',monospace", color:C.charcoal, outline:"none" };
+
+  return (
+    <div>
+      <SectionHead label="NEWS SOURCES" sub={`${active} active of ${sources.length} total · Toggle on/off · Add your own RSS feeds`}/>
+
+      {/* Add source form */}
+      <Card style={{ padding:16, marginBottom:18 }}>
+        <div style={{ color:C.charcoal, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, marginBottom:12 }}>ADD NEW SOURCE</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr 1fr auto", gap:8, marginBottom:10 }}>
+          <div>
+            <div style={{ color:C.wheatDark, fontSize:9, fontFamily:"'DM Mono',monospace", marginBottom:4 }}>NAME</div>
+            <input style={{ ...inputStyle, width:"100%" }} placeholder="e.g. Farm Weekly" value={name} onChange={e=>setName(e.target.value)}/>
+          </div>
+          <div>
+            <div style={{ color:C.wheatDark, fontSize:9, fontFamily:"'DM Mono',monospace", marginBottom:4 }}>RSS FEED URL</div>
+            <input style={{ ...inputStyle, width:"100%" }} placeholder="https://farmweekly.com.au/feed/" value={url} onChange={e=>setUrl(e.target.value)}
+              onFocus={e=>e.target.style.borderColor=C.eucalyptus} onBlur={e=>e.target.style.borderColor=C.lightGrey}
+            />
+          </div>
+          <div>
+            <div style={{ color:C.wheatDark, fontSize:9, fontFamily:"'DM Mono',monospace", marginBottom:4 }}>CATEGORY</div>
+            <select style={{ ...inputStyle, width:"100%" }} value={cat} onChange={e=>setCat(e.target.value)}>
+              {CATEGORIES.filter(c=>c!=="All").map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{ display:"flex", alignItems:"flex-end" }}>
+            <Btn onClick={add} style={{ padding:"8px 14px" }}>+ ADD</Btn>
+          </div>
+        </div>
+        <div style={{ color:C.charcoal, fontSize:11, lineHeight:1.7 }}>
+          <strong>RSS feeds:</strong> Most news sites have a /feed/ or /rss/ URL — paste it above.<br/>
+          <strong>Email newsletters:</strong> Forward emails via Gmail filter → Zapier → webhook → Muster.<br/>
+          <strong>Paid sites (AFR, Reuters):</strong> Use their RSS feed URL — your subscription handles authentication.<br/>
+          <strong>X/Twitter accounts:</strong> Use <code style={{ background:C.eggshell, padding:"1px 4px", borderRadius:2 }}>https://nitter.net/USERNAME/rss</code> as the feed URL.<br/>
+          <strong>PDFs & URLs:</strong> Use the PDF & URL Upload tab to paste articles directly.
+        </div>
+      </Card>
+
+      {/* Sources grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:8 }}>
+        {sources.map(s=>(
+          <Card key={s.id} style={{ padding:"12px 14px", display:"flex", alignItems:"center", gap:10, borderLeft:`3px solid ${s.active?C.eucalyptus:C.lightGrey}`, opacity:s.active?1:0.6, cursor:"pointer", transition:"all 0.15s" }}
+            onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.07)"}
+            onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}
+            onClick={()=>onToggle(s.id)}
+          >
+            <span style={{ fontSize:18, flexShrink:0 }}>{s.icon}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ color:C.charcoal, fontSize:12, fontWeight:600 }}>{s.name}</div>
+              <div style={{ color:C.wheatDark, fontSize:9, fontFamily:"'DM Mono',monospace", marginTop:1 }}>{s.type.toUpperCase()} · {s.url.replace("https://","").substring(0,32)}...</div>
+              <div style={{ color:C.wheatDark, fontSize:9, marginTop:2 }}>{s.cat}</div>
+            </div>
+            {/* Toggle */}
+            <div onClick={e=>{e.stopPropagation();onToggle(s.id);}} style={{
+              width:32, height:18, borderRadius:9, background:s.active?C.eucalyptus:C.lightGrey,
+              position:"relative", cursor:"pointer", flexShrink:0, transition:"background 0.2s",
+            }}>
+              <div style={{ position:"absolute", top:2, left:s.active?16:2, width:14, height:14, borderRadius:"50%", background:"white", transition:"left 0.2s" }}/>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── UPLOAD TAB ───────────────────────────────────────────────────────────────
+function UploadTab({ docs, onAddDoc }) {
+  const [urlInput, setUrlInput] = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteSource, setPasteSource] = useState("");
+  const [pasteLoading, setPasteLoading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef();
+
+  const inputStyle = { padding:"9px 12px", border:`1px solid ${C.lightGrey}`, borderRadius:3, fontSize:12, fontFamily:"'Inter',sans-serif", color:C.charcoal, outline:"none" };
+
+  async function callClaude(prompt) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514", max_tokens:600,
+          system:"You are an expert agricultural commodity market analyst. The user is a new commodity trader based in Australia. Analyse the provided content and give direct, specific commentary on its trading implications for Ag and commodity markets. Be educational and explain the WHY behind your analysis.",
+          messages:[{ role:"user", content:prompt }]
+        })
+      });
+      const data = await res.json();
+      return data.content?.map(b=>b.text||"").join("")||"No response.";
+    } catch { return "Connection error."; }
+  }
+
+  async function analyseUrl() {
+    if (!urlInput.trim()) return;
+    setUrlLoading(true);
+    const summary = await callClaude(`Analyse this article for an Australian Ag commodity trader. URL: ${urlInput}\n\nPlease provide:\n1. What category this falls into (Grains, Livestock, Wool, Ag Finance, Macro, Geopolitics, Weather, AU Domestic Ag)\n2. Whether this is bullish, bearish, or neutral for commodity markets\n3. Relevance score 1-10 for an Ag commodity trader\n4. A 3-4 sentence summary of why this matters and the specific trading implications`);
+    onAddDoc({ id:Date.now(), title:`Article: ${urlInput.substring(0,60)}...`, source:"URL Analysis", type:"Web Article", time:"Just now", summary, url:urlInput });
+    setUrlInput(""); setUrlLoading(false);
+  }
+
+  async function analyseText() {
+    if (!pasteText.trim()) return;
+    setPasteLoading(true);
+    const source = pasteSource || "Pasted content";
+    const summary = await callClaude(`Analyse this content for an Australian Ag commodity trader. Source: ${source}\n\nContent:\n${pasteText.substring(0,3000)}\n\nProvide:\n1. The key findings or data points\n2. Which commodity markets are affected and how\n3. Whether this is bullish, bearish, or neutral overall\n4. Specific trading implications — what should a trader do with this information?`);
+    onAddDoc({ id:Date.now(), title:`${source} — ${pasteText.substring(0,50)}...`, source, type:"Pasted Text", time:"Just now", summary });
+    setPasteText(""); setPasteSource(""); setPasteLoading(false);
+  }
+
+  async function processFile(file) {
+    const text = await file.text().catch(()=>"Could not read file");
+    const summary = await callClaude(`Analyse this document for an Australian Ag commodity trader.\nFile: ${file.name}\n\nContent (first 3000 chars):\n${text.substring(0,3000)}\n\nProvide:\n1. What type of document this is (broker note, research report, market update etc.)\n2. Key findings, data points, and recommendations\n3. Trading implications for Ag/commodity markets\n4. Relevance score 1-10 and which commodities are most affected`);
+    onAddDoc({ id:Date.now(), title:file.name, source:"PDF Upload", type:"PDF / Document", time:"Just now", summary });
+  }
+
+  function handleDrop(e) {
+    e.preventDefault(); setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+  }
+
+  return (
+    <div>
+      <SectionHead label="PDF & URL UPLOAD" sub="Drop broker notes, paste article URLs, or paste any text — Claude reads and summarises"/>
+
+      {/* URL */}
+      <Card style={{ padding:16, marginBottom:14 }}>
+        <div style={{ color:C.charcoal, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, marginBottom:10 }}>PASTE ARTICLE URL</div>
+        <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+          <input style={{ ...inputStyle, flex:1 }} placeholder="Paste any article URL — AFR, Reuters, broker research, Bloomberg..." value={urlInput} onChange={e=>setUrlInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&analyseUrl()}
+            onFocus={e=>e.target.style.borderColor=C.eucalyptus} onBlur={e=>e.target.style.borderColor=C.lightGrey}
+          />
+          <Btn onClick={analyseUrl} disabled={urlLoading}>
+            {urlLoading?<><Spinner/>ANALYSING...</>:"◆ ANALYSE"}
+          </Btn>
+        </div>
+        <div style={{ color:C.wheatDark, fontSize:11 }}>Works with any public article URL. For paywalled content, paste the article text below instead.</div>
+      </Card>
+
+      {/* Text paste */}
+      <Card style={{ padding:16, marginBottom:14 }}>
+        <div style={{ color:C.charcoal, fontSize:11, fontFamily:"'DM Mono',monospace", fontWeight:600, marginBottom:10 }}>PASTE ARTICLE TEXT OR TRANSCRIPT</div>
+        <textarea value={pasteText} onChange={e=>setPasteText(e.target.value)} rows={5} placeholder="Paste article text, broker research note, email newsletter, podcast transcript, or any content you want Claude to analyse..." style={{ ...inputStyle, width:"100%", resize:"vertical", fontFamily:"'Inter',sans-serif", marginBottom:8 }}
+          onFocus={e=>e.target.style.borderColor=C.eucalyptus} onBlur={e=>e.target.style.borderColor=C.lightGrey}
+        />
+        <div style={{ display:"flex", gap:8 }}>
+          <input style={{ ...inputStyle, flex:1 }} placeholder="Source name (e.g. AFR, Broker note, Substack)" value={pasteSource} onChange={e=>setPasteSource(e.target.value)}
+            onFocus={e=>e.target.style.borderColor=C.eucalyptus} onBlur={e=>e.target.style.borderColor=C.lightGrey}
+          />
+          <Btn onClick={analyseText} disabled={pasteLoading}>
+            {pasteLoading?<><Spinner/>ANALYSING...</>:"◆ ANALYSE TEXT"}
+          </Btn>
+        </div>
+      </Card>
+
+      {/* PDF drop zone */}
+      <div
+        onDragOver={e=>{e.preventDefault();setDragOver(true);}}
+        onDragLeave={()=>setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={()=>fileRef.current?.click()}
+        style={{
+          border:`2px dashed ${dragOver?C.eucalyptus:C.lightGrey}`,
+          borderRadius:4, padding:30, textAlign:"center", cursor:"pointer",
+          background:dragOver?C.eucalyptusPale:C.offwhite,
+          transition:"all 0.2s", marginBottom:16,
+        }}
+      >
+        <input ref={fileRef} type="file" accept=".pdf,.txt,.csv" style={{ display:"none" }} onChange={e=>{if(e.target.files[0])processFile(e.target.files[0]);}}/>
+        <div style={{ fontSize:32, marginBottom:8 }}>📄</div>
+        <div style={{ color:C.charcoal, fontSize:13, fontWeight:500, marginBottom:4 }}>Drop PDF broker notes or research here</div>
+        <div style={{ color:C.wheatDark, fontSize:11, fontFamily:"'DM Mono',monospace" }}>PDF · TXT · CSV · Click to browse or drag and drop</div>
+      </div>
+
+      {/* Analysed docs */}
+      {docs.length > 0 && (
+        <div>
+          <SectionHead label="ANALYSED DOCUMENTS" sub={`${docs.length} document${docs.length>1?"s":""} analysed`}/>
+          {docs.map(doc=>(
+            <Card key={doc.id} style={{ padding:"14px 16px", marginBottom:8, borderLeft:`4px solid ${C.eucalyptus}`, animation:"fadeIn 0.3s ease" }}>
+              <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:6, flexWrap:"wrap" }}>
+                <span style={{ fontSize:9, padding:"2px 7px", borderRadius:2, fontFamily:"'DM Mono',monospace", fontWeight:600, color:C.navy, background:C.navyPale, border:`1px solid ${C.navy}22` }}>📄 {doc.type}</span>
+                <span style={{ fontSize:9, padding:"2px 6px", borderRadius:2, fontFamily:"'DM Mono',monospace", color:C.charcoal, background:C.eggshell, border:`1px solid ${C.lightGrey}` }}>{doc.source}</span>
+                <span style={{ fontSize:9, padding:"2px 7px", borderRadius:2, fontFamily:"'DM Mono',monospace", fontWeight:700, color:C.eucalyptus, background:C.eucalyptusPale }}>⚡ UPLOADED</span>
+                <span style={{ color:C.lightGrey, fontSize:10, fontFamily:"'DM Mono',monospace", marginLeft:"auto" }}>{doc.time}</span>
+              </div>
+              <div style={{ color:C.charcoal, fontSize:13, fontWeight:600, marginBottom:8, lineHeight:1.3 }}>{doc.title}</div>
+              <div style={{ padding:"10px 12px", background:C.offwhite, borderRadius:3, borderLeft:`2px solid ${C.wheat}` }}>
+                <div style={{ color:C.wheat, fontSize:9, fontFamily:"'DM Mono',monospace", fontWeight:700, letterSpacing:"0.1em", marginBottom:5 }}>◆ CLAUDE'S ANALYSIS</div>
+                <div style={{ color:C.charcoal, fontSize:12, lineHeight:1.65 }}>{doc.summary}</div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+export default function IntelligenceFeed() {
+  const [activeTab, setActiveTab] = useState("feed");
+  const [sources, setSources] = useState(DEFAULT_SOURCES);
+  const [articles, setArticles] = useState(SIMULATED_ARTICLES);
+  const [uploadedDocs, setUploadedDocs] = useState([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+
+  async function handleRefresh() {
+    setFeedLoading(true);
+    // PRODUCTION: fetch all active RSS feeds via CORS proxy, send to Claude for filtering + summarising
+    // For now simulate delay
+    await new Promise(r=>setTimeout(r,1500));
+    setFeedLoading(false);
+  }
+
+  async function handleDeepDive(id) {
+    const article = articles.find(a=>a.id===id);
+    if (!article || article.deepDive) return;
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514", max_tokens:700,
+          system:"You are an expert agricultural commodity market analyst. Give a detailed deep dive analysis for an Australian Ag commodity trader. Be specific, educational, and actionable.",
+          messages:[{ role:"user", content:`Deep dive analysis for this news:\n\nHeadline: ${article.headline}\nSource: ${article.source}\nCategory: ${article.category}\nSentiment: ${article.sentiment}\nInitial summary: ${article.summary}\n\nProvide: (1) Full context and background, (2) Which specific markets/prices are affected and how, (3) What to watch as follow-up signals, (4) How this connects to other current market themes. 3-4 paragraphs.` }]
+        })
+      });
+      const data = await res.json();
+      const deepDive = data.content?.map(b=>b.text||"").join("")||"";
+      setArticles(prev=>prev.map(a=>a.id===id?{...a,deepDive}:a));
+    } catch(e) { console.error(e); }
+  }
+
+  const TABS = [
+    { id:"feed",    label:"INTELLIGENCE FEED", count:articles.length },
+    { id:"digest",  label:"DAILY DIGEST",      count:0              },
+    { id:"sources", label:"SOURCES",           count:sources.filter(s=>s.active).length },
+    { id:"upload",  label:"PDF & URL UPLOAD",  count:uploadedDocs.length },
+  ];
+
+  return (
+    <div>
+      <style>{`
+        @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+      `}</style>
+
+      {/* Header banner */}
+      <div style={{ background:`linear-gradient(135deg, ${C.navy} 0%, ${C.eucalyptus} 100%)`, borderRadius:6, padding:"16px 22px", marginBottom:18, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:26 }}>🧠</span>
+          <div>
+            <div style={{ color:C.wheat, fontSize:17, fontWeight:700, fontFamily:"'DM Mono',monospace", letterSpacing:"0.12em" }}>INTELLIGENCE FEED</div>
+            <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11, fontFamily:"'DM Mono',monospace" }}>
+              {sources.filter(s=>s.active).length} active sources · {articles.length} articles · Claude-filtered & summarised
+            </div>
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:20 }}>
+          {[
+            ["ARTICLES",    articles.length,                               C.wheat ],
+            ["HIGH RELEVANCE", articles.filter(a=>a.relevance==="high").length, "#7de8a0"],
+            ["BULLISH",     articles.filter(a=>a.sentiment==="bullish").length, "#7de8a0"],
+            ["BEARISH",     articles.filter(a=>a.sentiment==="bearish").length, "#f87171"],
+          ].map(([l,v,c])=>(
+            <div key={l} style={{ textAlign:"right" }}>
+              <div style={{ color:"rgba(255,255,255,0.5)", fontSize:9, fontFamily:"'DM Mono',monospace", marginBottom:2 }}>{l}</div>
+              <div style={{ color:c, fontSize:18, fontFamily:"'DM Mono',monospace", fontWeight:700 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sub tab nav */}
+      <div style={{ background:C.white, border:`1px solid ${C.lightGrey}`, borderRadius:4, padding:"4px 6px", marginBottom:18, display:"flex", gap:2, overflowX:"auto" }}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
+            background: activeTab===t.id ? C.eggshell : "none",
+            border: `1px solid ${activeTab===t.id?C.lightGrey:"transparent"}`,
+            borderRadius:3, padding:"7px 14px", cursor:"pointer",
+            fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight: activeTab===t.id?600:400,
+            letterSpacing:"0.08em", color: activeTab===t.id?C.eucalyptus:C.wheatDark,
+            transition:"all 0.15s", whiteSpace:"nowrap",
+          }}
+          onMouseEnter={e=>{if(activeTab!==t.id)e.target.style.color=C.charcoal;}}
+          onMouseLeave={e=>{if(activeTab!==t.id)e.target.style.color=C.wheatDark;}}
+          >
+            {t.label}
+            {t.count>0 && <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", background:C.eucalyptus, color:"white", borderRadius:10, fontSize:8, padding:"1px 5px", marginLeft:5, fontWeight:700 }}>{t.count}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div style={{ animation:"fadeIn 0.2s ease" }}>
+        {activeTab==="feed"    && <FeedTab    articles={articles} sources={sources} onDeepDive={handleDeepDive} onRefresh={handleRefresh} loading={feedLoading}/>}
+        {activeTab==="digest"  && <DigestTab  articles={articles} sources={sources}/>}
+        {activeTab==="sources" && <SourcesTab sources={sources} onToggle={id=>setSources(p=>p.map(s=>s.id===id?{...s,active:!s.active}:s))} onAdd={s=>setSources(p=>[...p,s])} onRemove={id=>setSources(p=>p.filter(s=>s.id!==id))}/>}
+        {activeTab==="upload"  && <UploadTab  docs={uploadedDocs} onAddDoc={doc=>setUploadedDocs(p=>[doc,...p])}/>}
+      </div>
+    </div>
+  );
+}
