@@ -566,7 +566,7 @@ function AUNewsFeed(){
               </div>
               <a href={n.url} target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:10,fontFamily:"'DM Mono',monospace",textDecoration:"none",flexShrink:0}} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{n.source} →</a>
             </div>
-            <a href={n.url} target="_blank" rel="noopener noreferrer" style={{color:C.charcoal,fontSize:12,lineHeight:1.45,textDecoration:"none",display:"block",fontWeight:500}} onMouseEnter={e=>e.target.style.color=C.navy} onMouseLeave={e=>e.target.style.color=C.charcoal}>{n.headline}</a>
+            <a href={n.url} target="_blank" rel="noopener noreferrer" style={{color:C.charcoal,fontSize:12,lineHeight:1.45,textDecoration:"none",display:"block",fontWeight:600,fontFamily:"'Lora',serif"}} onMouseEnter={e=>e.target.style.color=C.navy} onMouseLeave={e=>e.target.style.color=C.charcoal}>{n.headline}</a>
           </Card>
         ))}
         <HookBadge text="Wire Grain Central, Weekly Times, and MLA news feeds for live Australian Ag headlines. NewsAPI free tier covers most sources."/>
@@ -640,9 +640,9 @@ function AUExportDestinations(){
         </Card>
         <Card style={{padding:16,background:C.offwhite}}>
           <div style={{color:C.charcoal,fontSize:12,fontWeight:600,marginBottom:10}}>Why this matters for prices</div>
-          {activeCom==="wheat"&&<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65}}>Australia is the world's 4th largest wheat exporter. SE Asian buyers (Indonesia, Philippines, Vietnam) are price-sensitive and will switch to Black Sea or Canadian wheat if Australian prices are uncompetitive. The AUD/USD exchange rate directly affects this competitiveness — a weaker AUD makes Australian wheat cheaper for buyers settling in USD.</div>}
-          {activeCom==="beef"&&<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65}}>Japan and Korea pay premium prices for chilled Australian beef. These markets are relatively stable compared to China, which is the most volatile customer — prone to sudden policy changes affecting access. The US takes manufacturing beef for grinding, which is less price-sensitive but highly volume-driven.</div>}
-          {activeCom==="wool"&&<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65}}>China buys ~75% of Australian wool clip — making the Australian wool market almost entirely dependent on Chinese processing demand and consumer sentiment. When Chinese mills are running at full capacity and forward-buying, the EMI rises sharply. Any slowdown in Chinese apparel exports flows directly to softer wool prices within 6-8 weeks.</div>}
+          {activeCom==="wheat"&&<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65,fontFamily:"'Lora',serif"}}>Australia is the world's 4th largest wheat exporter. SE Asian buyers (Indonesia, Philippines, Vietnam) are price-sensitive and will switch to Black Sea or Canadian wheat if Australian prices are uncompetitive. The AUD/USD exchange rate directly affects this competitiveness — a weaker AUD makes Australian wheat cheaper for buyers settling in USD.</div>}
+          {activeCom==="beef"&&<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65,fontFamily:"'Lora',serif"}}>Japan and Korea pay premium prices for chilled Australian beef. These markets are relatively stable compared to China, which is the most volatile customer — prone to sudden policy changes affecting access. The US takes manufacturing beef for grinding, which is less price-sensitive but highly volume-driven.</div>}
+          {activeCom==="wool"&&<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65,fontFamily:"'Lora',serif"}}>China buys ~75% of Australian wool clip — making the Australian wool market almost entirely dependent on Chinese processing demand and consumer sentiment. When Chinese mills are running at full capacity and forward-buying, the EMI rises sharply. Any slowdown in Chinese apparel exports flows directly to softer wool prices within 6-8 weeks.</div>}
         </Card>
       </div>
     </div>
@@ -687,7 +687,7 @@ function AUAnalyst(){
   const suggestions=["How does the AUD/USD affect WA wheat prices?","What drives the EYCI — how do I read it?","Explain the wool EMI and how it's set","Why did China's barley tariff removal matter so much?","How do AU wheat prices relate to Chicago wheat futures?","What's the difference between delivered port and farm gate prices?"];
   async function send(){
     if(!input.trim()||loading)return; const msg=input.trim(); setInput(""); setMessages(p=>[...p,{role:"user",text:msg}]); setLoading(true);
-    try{const hist=messages.slice(1).map(m=>({role:m.role,content:m.text}));const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:sys,messages:[...hist,{role:"user",content:msg}]})});const data=await res.json();setMessages(p=>[...p,{role:"assistant",text:data.content?.map(b=>b.text||"").join("")||"Couldn't get a response."}]);}catch{setMessages(p=>[...p,{role:"assistant",text:"Connection error."}]);}
+    try{const hist=messages.slice(1).map(m=>({role:m.role,content:m.text}));const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:sys,messages:[...hist,{role:"user",content:msg}]})});const data=await res.json();setMessages(p=>[...p,{role:"assistant",text:data.content?.map(b=>b.text||"").join("")||"Couldn't get a response."}]);}catch{setMessages(p=>[...p,{role:"assistant",text:"Connection error."}]);}
     setLoading(false);
   }
   return (
@@ -697,7 +697,7 @@ function AUAnalyst(){
         <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:10}}>
           {messages.map((m,i)=>(
             <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-              <div style={{maxWidth:"88%",background:m.role==="user"?C.navy:C.white,border:`1px solid ${m.role==="user"?C.navy:C.lightGrey}`,borderRadius:4,padding:"10px 14px",color:m.role==="user"?C.eggshell:C.charcoal,fontSize:13,lineHeight:1.65}}>
+              <div style={{maxWidth:"88%",background:m.role==="user"?C.navy:C.white,border:`1px solid ${m.role==="user"?C.navy:C.lightGrey}`,borderRadius:4,padding:"10px 14px",color:m.role==="user"?C.eggshell:C.charcoal,fontSize:13,lineHeight:1.65,fontFamily:m.role==="assistant"?"'Lora',serif":"'IBM Plex Sans',sans-serif"}}>
                 {m.role==="assistant"&&<div style={{color:C.auGold,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:5,fontWeight:700,letterSpacing:"0.12em"}}>🦘 AU AG ANALYST</div>}
                 {m.text}
               </div>
@@ -746,7 +746,7 @@ function AUDataCosts(){
         ))}
         <div style={{marginTop:14,padding:"10px 14px",background:C.eucalyptusPale,border:`1px solid ${C.eucalyptus}33`,borderRadius:3}}>
           <div style={{color:C.eucalyptus,fontSize:11,fontWeight:600,marginBottom:4}}>Bottom line on AU data costs</div>
-          <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6}}>The majority of what you need — all MLA livestock indicators, AWEX wool prices, ABARES forecasts, and most news — is completely free. The only paid item worth considering is Mecardo (~$200/mo) if you want clean, structured AU grain delivered prices by region via API. Even without it, GIWA, Grain Central, and state grain council websites publish most of this data for free — it just needs manual scraping rather than a clean API call.</div>
+          <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6,fontFamily:"'Lora',serif"}}>The majority of what you need — all MLA livestock indicators, AWEX wool prices, ABARES forecasts, and most news — is completely free. The only paid item worth considering is Mecardo (~$200/mo) if you want clean, structured AU grain delivered prices by region via API. Even without it, GIWA, Grain Central, and state grain council websites publish most of this data for free — it just needs manual scraping rather than a clean API call.</div>
         </div>
       </Card>
     </div>

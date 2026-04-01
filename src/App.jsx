@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import IntelligenceFeed from "./IntelligenceFeed";
+import AustraliaTab from "./AustraliaTab";
+import AutoTrader from "./AutoTrader";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COLOUR SYSTEM
@@ -109,22 +112,85 @@ const NEWS = [
   {id:10,time:"15h ago",headline:"NOAA upgrades La Niña watch — 60% probability developing by June–August",tag:"ENSO",bullish:true, source:"NOAA CPC",url:"https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/",commodity:"ZW",hot:true},
 ];
 
-const WEATHER_DATA = [
-  {region:"US Corn Belt",      condition:"Dry stress",    severity:"moderate",detail:"Soil moisture 15% below normal across IA, IL, IN",icon:"☀️",impact:"Bullish corn",  lat:42,lng:-93},
-  {region:"US Plains (Wheat)", condition:"Drought D2-D3", severity:"severe",  detail:"Extreme drought KS, OK, TX panhandle — worsening",icon:"🔥",impact:"Bullish wheat", lat:38,lng:-98},
-  {region:"Brazil Mato Grosso",condition:"Favourable",    severity:"normal",  detail:"Good rains supporting second-crop corn",          icon:"🌧️",impact:"Bearish corn",  lat:-13,lng:-56},
-  {region:"Argentina Pampas",  condition:"Drying",        severity:"moderate",detail:"Below-normal rainfall forecast next 10 days",       icon:"🌤️",impact:"Bullish soy",  lat:-34,lng:-63},
-  {region:"Black Sea",         condition:"Cold stress",   severity:"mild",    detail:"Late frost risk for Ukraine winter wheat",           icon:"❄️",impact:"Bullish wheat", lat:49,lng:32},
-  {region:"Australia WA",      condition:"Favourable",    severity:"normal",  detail:"Good subsoil moisture ahead of winter planting",     icon:"✅",impact:"Neutral",       lat:-30,lng:118},
+const WEATHER_LOCATIONS = [
+  {region:"US Corn Belt",      severity:"moderate",detail:"Soil moisture 15% below normal across IA, IL, IN",icon:"☀️",impact:"Bullish corn",  lat:42,  lng:-93},
+  {region:"US Plains (Wheat)", severity:"severe",  detail:"Extreme drought KS, OK, TX panhandle — worsening",icon:"🔥",impact:"Bullish wheat", lat:38,  lng:-98},
+  {region:"Brazil Mato Grosso",severity:"normal",  detail:"Good rains supporting second-crop corn",          icon:"🌧️",impact:"Bearish corn",  lat:-13, lng:-56},
+  {region:"Argentina Pampas",  severity:"moderate",detail:"Below-normal rainfall forecast next 10 days",       icon:"🌤️",impact:"Bullish soy",  lat:-34, lng:-63},
+  {region:"Black Sea",         severity:"mild",    detail:"Late frost risk for Ukraine winter wheat",           icon:"❄️",impact:"Bullish wheat", lat:49,  lng:32},
+  {region:"Australia WA",      severity:"normal",  detail:"Good subsoil moisture ahead of winter planting",     icon:"✅",impact:"Neutral",       lat:-30, lng:118},
 ];
 
-const CURRENCIES_DATA = [
-  {pair:"DXY",    name:"US Dollar Index",   value:104.23,change:-0.31,pct:-0.30,impact:"Soft → tailwind for US exports",      bull:true, fredId:"DTWEXBGS"},
-  {pair:"BRL/USD",name:"Brazilian Real",    value:5.0821,change:0.04, pct:0.82, impact:"Weak → Brazil selling aggressively",  bull:false,fredId:"DEXBZUS"},
-  {pair:"ARS/USD",name:"Argentine Peso",    value:1042.5,change:12.5, pct:1.20, impact:"Elevated — watch farmer selling",     bull:false,fredId:"DEXARGE"},
-  {pair:"EUR/USD",name:"Euro",              value:1.0812,change:0.002,pct:0.18, impact:"Neutral",                             bull:true, fredId:"DEXUSEU"},
-  {pair:"AUD/USD",name:"Australian Dollar", value:0.6234,change:-0.003,pct:-0.42,impact:"Weak → AU wheat more competitive",   bull:true, fredId:"DEXUSAL"},
+// Used as static fallback and for the home page summary widget
+const WEATHER_DATA = WEATHER_LOCATIONS.map(loc=>({
+  ...loc,
+  condition:loc.detail,
+  temp:null, precip:null, wind:null,
+}));
+
+const CURRENCIES_META = [
+  {pair:"DXY",    name:"US Dollar Index",   impact:"Soft → tailwind for US exports",      bull:true, fredId:"DTWEXBGS"},
+  {pair:"BRL/USD",name:"Brazilian Real",    impact:"Weak → Brazil selling aggressively",  bull:false,fredId:"DEXBZUS"},
+  {pair:"ARS/USD",name:"Argentine Peso",    impact:"Elevated — watch farmer selling",     bull:false,fredId:"DEXARGE"},
+  {pair:"EUR/USD",name:"Euro",              impact:"Neutral",                             bull:true, fredId:"DEXUSEU"},
+  {pair:"AUD/USD",name:"Australian Dollar", impact:"Weak → AU wheat more competitive",   bull:true, fredId:"DEXUSAL"},
 ];
+
+// Used as static fallback and for the home page summary widget
+const CURRENCIES_DATA = CURRENCIES_META.map(m=>({
+  ...m, value:null, change:null, pct:null,
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FETCH HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchWeatherData() {
+  const results = await Promise.all(
+    WEATHER_LOCATIONS.map(loc =>
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lng}&current=temperature_2m,precipitation,windspeed_10m&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&timezone=auto`
+      ).then(r => r.json()).catch(() => null)
+    )
+  );
+  return WEATHER_LOCATIONS.map((loc, i) => {
+    const data = results[i];
+    const cur = data?.current;
+    const temp = cur?.temperature_2m ?? null;
+    const precip = cur?.precipitation ?? null;
+    const wind = cur?.windspeed_10m ?? null;
+    let condition = loc.detail;
+    if (temp !== null) {
+      condition = `${temp}°C · ${precip}mm precip · ${wind}km/h wind`;
+    }
+    return { ...loc, condition, temp, precip, wind };
+  });
+}
+
+function parseFredCsv(csv) {
+  const lines = csv.trim().split("\n").filter(l => l && !l.startsWith("DATE"));
+  const valid = lines.filter(l => {
+    const parts = l.split(",");
+    return parts[1] && parts[1].trim() !== ".";
+  });
+  if (valid.length < 2) return { value: null, change: null, pct: null };
+  const latest = parseFloat(valid[valid.length - 1].split(",")[1]);
+  const prev = parseFloat(valid[valid.length - 2].split(",")[1]);
+  const change = latest - prev;
+  const pct = prev !== 0 ? (change / prev) * 100 : 0;
+  return { value: latest, change, pct };
+}
+
+async function fetchCurrenciesData() {
+  const results = await Promise.all(
+    CURRENCIES_META.map(m =>
+      fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${m.fredId}`)
+        .then(r => r.text())
+        .then(csv => parseFredCsv(csv))
+        .catch(() => ({ value: null, change: null, pct: null }))
+    )
+  );
+  return CURRENCIES_META.map((m, i) => ({ ...m, ...results[i] }));
+}
 
 const WASDE_DATA = {
   corn:    {global_prod:1219.0,us_prod:389.7,us_exports:62.2,global_stocks:284.2,stur:13.4,prev_stur:14.1,trend:"down"},
@@ -339,8 +405,8 @@ function PriceCharts(){
   const comm=COMMODITIES.find(c=>c.symbol===activeSym);
   const p=PRICES[activeSym];
   const up=p.pct>=0;
-  const ohlc=generateOHLC(p.price,range);
-  const signals=generateSignals(ohlc);
+  const ohlc=useMemo(()=>generateOHLC(p.price,range),[activeSym,range]);
+  const signals=useMemo(()=>generateSignals(ohlc),[ohlc]);
   const buys=signals.filter(s=>s.type==="BUY");
   const sells=signals.filter(s=>s.type==="SELL");
   const pnlTrades=[];
@@ -460,7 +526,7 @@ function Backtesting(){
     setAiAnalysis("loading");
     const strat=STRATEGIES.find(s=>s.id===strategy);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:"You are a commodity trading coach analysing backtesting results for a new trader. Be educational, honest about limitations, and provide actionable insights. 3-4 paragraphs max.",messages:[{role:"user",content:`Analyse these backtesting results for ${comm?.name} using the ${strat?.name} strategy:\n\nTotal trades: ${results.total}\nWin rate: ${results.winRate.toFixed(1)}%\nTotal P&L (simulated): $${results.totalPnl.toFixed(0)}\nAvg winning trade: $${results.avgWin.toFixed(0)}\nAvg losing trade: $${results.avgLoss.toFixed(0)}\nProfit factor: ${results.profitFactor.toFixed(2)}\n\nProvide: what these results suggest about the strategy, key limitations of backtesting, how to interpret the profit factor, and what additional analysis a new trader should do before trading this strategy live.`}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:"You are a commodity trading coach analysing backtesting results for a new trader. Be educational, honest about limitations, and provide actionable insights. 3-4 paragraphs max.",messages:[{role:"user",content:`Analyse these backtesting results for ${comm?.name} using the ${strat?.name} strategy:\n\nTotal trades: ${results.total}\nWin rate: ${results.winRate.toFixed(1)}%\nTotal P&L (simulated): $${results.totalPnl.toFixed(0)}\nAvg winning trade: $${results.avgWin.toFixed(0)}\nAvg losing trade: $${results.avgLoss.toFixed(0)}\nProfit factor: ${results.profitFactor.toFixed(2)}\n\nProvide: what these results suggest about the strategy, key limitations of backtesting, how to interpret the profit factor, and what additional analysis a new trader should do before trading this strategy live.`}]})});
       const data=await res.json();
       setAiAnalysis(data.content?.map(b=>b.text||"").join("")||"Could not get analysis.");
     }catch{setAiAnalysis("Connection error.");}
@@ -545,7 +611,7 @@ function Backtesting(){
             {aiAnalysis&&aiAnalysis!=="loading"&&(
               <Card style={{padding:16,borderLeft:`4px solid ${C.wheat}`}}>
                 <div style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:8,letterSpacing:"0.12em"}}>◆ AI BACKTEST ANALYSIS</div>
-                <div style={{color:C.charcoal,fontSize:13,lineHeight:1.7}}>{aiAnalysis}</div>
+                <div style={{color:C.charcoal,fontSize:13,lineHeight:1.7,fontFamily:"'Lora',serif"}}>{aiAnalysis}</div>
               </Card>
             )}
           </div>
@@ -574,7 +640,7 @@ function AIAnalyst(){
     const msg=input.trim(); setInput(""); setMessages(p=>[...p,{role:"user",text:msg}]); setLoading(true);
     try{
       const hist=messages.slice(1).map(m=>({role:m.role,content:m.text}));
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:sys,messages:[...hist,{role:"user",content:msg}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:sys,messages:[...hist,{role:"user",content:msg}]})});
       const data=await res.json();
       setMessages(p=>[...p,{role:"assistant",text:data.content?.map(b=>b.text||"").join("")||"Couldn't get a response."}]);
     }catch{setMessages(p=>[...p,{role:"assistant",text:"Connection error."}]);}
@@ -587,7 +653,7 @@ function AIAnalyst(){
         <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}>
           {messages.map((m,i)=>(
             <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-              <div style={{maxWidth:"88%",background:m.role==="user"?C.navy:C.white,border:`1px solid ${m.role==="user"?C.navy:C.lightGrey}`,borderRadius:4,padding:"12px 16px",color:m.role==="user"?C.eggshell:C.charcoal,fontSize:13,lineHeight:1.65}}>
+              <div style={{maxWidth:"88%",background:m.role==="user"?C.navy:C.white,border:`1px solid ${m.role==="user"?C.navy:C.lightGrey}`,borderRadius:4,padding:"12px 16px",color:m.role==="user"?C.eggshell:C.charcoal,fontSize:13,lineHeight:1.65,fontFamily:m.role==="assistant"?"'Lora',serif":"'IBM Plex Sans',sans-serif"}}>
                 {m.role==="assistant"&&<div style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:6,fontWeight:700,letterSpacing:"0.12em"}}>◆ MUSTER ANALYST</div>}
                 {m.text}
               </div>
@@ -615,7 +681,7 @@ function HomePage(){
   async function genBrief(){
     setBriefLoading(true); setBrief("");
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,system:"You are Muster's Ag market analyst writing a concise morning briefing for a new commodity trader in Australia. Be direct, sharp, educational. Cover the 3-4 most important things happening in Ag markets today. Reference actual data. Max 4 short paragraphs. Plain English.",messages:[{role:"user",content:`Write today's Ag market morning brief (${new Date().toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}) based on: Corn +0.79% (478.25¢), Wheat -1.37% (592.50¢), Soybeans +1.16% (1087.75¢), Live Cattle +0.48% (184.325¢), Lean Hogs -1.32% (91.275¢). Key stories: Plains drought worsening D2/D3, China cancelled 3 corn cargoes, USDA raised Brazil soy estimate to 169.5 MMT, La Niña watch issued by NOAA, Cattle placements above expectations. DXY soft at 104.23. Next WASDE: Tuesday Apr 8.`}]})});
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,system:"You are Muster's Ag market analyst writing a concise morning briefing for a new commodity trader in Australia. Be direct, sharp, educational. Cover the 3-4 most important things happening in Ag markets today. Reference actual data. Max 4 short paragraphs. Plain English.",messages:[{role:"user",content:`Write today's Ag market morning brief (${new Date().toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}) based on: Corn +0.79% (478.25¢), Wheat -1.37% (592.50¢), Soybeans +1.16% (1087.75¢), Live Cattle +0.48% (184.325¢), Lean Hogs -1.32% (91.275¢). Key stories: Plains drought worsening D2/D3, China cancelled 3 corn cargoes, USDA raised Brazil soy estimate to 169.5 MMT, La Niña watch issued by NOAA, Cattle placements above expectations. DXY soft at 104.23. Next WASDE: Tuesday Apr 8.`}]})});
       const data=await res.json();
       setBrief(data.content?.map(b=>b.text||"").join("")||"Could not generate brief.");
       setBriefDone(true);
@@ -641,7 +707,7 @@ function HomePage(){
           </button>
         </div>
         {briefLoading&&<div style={{color:C.wheatDark,fontSize:12,fontFamily:"'DM Mono',monospace"}}><span style={{animation:"blink 1s infinite"}}>▋</span> Analysing today's markets...</div>}
-        {brief&&<div style={{color:C.charcoal,fontSize:13,lineHeight:1.75}}>{brief}</div>}
+        {brief&&<div style={{color:C.charcoal,fontSize:13,lineHeight:1.75,fontFamily:"'Lora',serif"}}>{brief}</div>}
         {!brief&&!briefLoading&&<div style={{color:C.wheatDark,fontSize:12}}>Get an AI-generated summary of what's moving Ag markets today — grains, livestock, weather, and what to watch.</div>}
       </Card>
 
@@ -755,8 +821,8 @@ function HomePage(){
               {CURRENCIES_DATA.map((c,i)=>(
                 <Card key={i} style={{padding:"9px 12px",display:"flex",alignItems:"center",gap:10}}>
                   <div style={{minWidth:68}}><div style={{color:C.navy,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{c.pair}</div><div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace"}}>{c.name}</div></div>
-                  <div style={{minWidth:60}}><div style={{color:C.charcoal,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{c.value}</div></div>
-                  <div style={{minWidth:48}}><span style={{color:c.pct>0?(c.pair==="DXY"?C.negative:C.eucalyptus):C.eucalyptus,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{c.pct>0?"+":""}{c.pct.toFixed(2)}%</span></div>
+                  <div style={{minWidth:60}}><div style={{color:C.charcoal,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{c.value!=null?c.value:"—"}</div></div>
+                  <div style={{minWidth:48}}><span style={{color:c.pct!=null&&c.pct>0?(c.pair==="DXY"?C.negative:C.eucalyptus):C.eucalyptus,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{c.pct!=null?(c.pct>0?"+":"")+c.pct.toFixed(2)+"%":"—"}</span></div>
                   <div style={{flex:1,padding:"3px 7px",background:c.bull?C.eucalyptusPale:C.negativePale,borderRadius:2,borderLeft:`2px solid ${c.bull?C.eucalyptus:C.negative}`}}><span style={{color:C.charcoal,fontSize:10}}>{c.impact}</span></div>
                   <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none",flexShrink:0}}>FRED →</a>
                 </Card>
@@ -856,7 +922,7 @@ function SupplyDemand(){
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <Card style={{padding:16}}>
             <div style={{color:C.charcoal,fontSize:12,fontWeight:600,marginBottom:8}}>What does this mean for prices?</div>
-            <div style={{color:C.charcoal,fontSize:12,lineHeight:1.65}}>{d.trend==="down"?`A falling stocks-to-use ratio (${d.prev_stur}% → ${d.stur}%) means global supply is being drawn down faster than it's replenished. Tighter supplies generally support or lift prices — the market needs to ration demand.`:`A rising stocks-to-use ratio (${d.prev_stur}% → ${d.stur}%) means supply is growing relative to demand. Building stocks tend to cap or push down prices — plenty of supply available.`}</div>
+            <div style={{color:C.charcoal,fontSize:12,lineHeight:1.65,fontFamily:"'Lora',serif"}}>{d.trend==="down"?`A falling stocks-to-use ratio (${d.prev_stur}% → ${d.stur}%) means global supply is being drawn down faster than it's replenished. Tighter supplies generally support or lift prices — the market needs to ration demand.`:`A rising stocks-to-use ratio (${d.prev_stur}% → ${d.stur}%) means supply is growing relative to demand. Building stocks tend to cap or push down prices — plenty of supply available.`}</div>
           </Card>
           <Card style={{padding:16}}>
             <div style={{color:C.charcoal,fontSize:12,fontWeight:600,marginBottom:8}}>Export Pace vs USDA Target</div>
@@ -910,7 +976,7 @@ function Seasonals(){
         </Card>
         <Card style={{padding:16,background:C.offwhite}}>
           <div style={{color:C.charcoal,fontSize:12,fontWeight:600,marginBottom:8}}>Seasonal Context</div>
-          <div style={{color:C.charcoal,fontSize:12,lineHeight:1.65}}>
+          <div style={{color:C.charcoal,fontSize:12,lineHeight:1.65,fontFamily:"'Lora',serif"}}>
             {activeSym==="ZC"&&"Corn typically bottoms around harvest (Oct–Nov) and rallies into summer as weather uncertainty builds. The critical weather window (pollination) is Jun–Jul — this is where the biggest seasonal volatility occurs."}
             {activeSym==="ZW"&&"Wheat seasonally peaks in late spring/early summer ahead of Northern Hemisphere harvest, then declines through July. Plains drought currently supporting a rally above the seasonal average."}
             {activeSym==="ZS"&&"Soybeans typically rally from Jan through July on Southern Hemisphere uncertainty, then soften into US harvest. Brazilian crop condition (Jan–Mar) and US planting progress (May–Jun) are the two most important seasonal catalysts."}
@@ -1091,7 +1157,7 @@ function Portfolio(){
                       <div key={l}><div style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:1}}>{l}</div><div style={{color:c,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</div></div>
                     ))}
                   </div>
-                  {pos.thesis&&<div style={{color:C.charcoal,fontSize:12,fontStyle:"italic",padding:"6px 10px",background:C.eggshell,borderRadius:2,borderLeft:`2px solid ${C.wheat}`}}>"{pos.thesis}"</div>}
+                  {pos.thesis&&<div style={{color:C.charcoal,fontSize:12,fontStyle:"italic",padding:"6px 10px",background:C.eggshell,borderRadius:2,borderLeft:`2px solid ${C.wheat}`,fontFamily:"'Lora',serif"}}>"{pos.thesis}"</div>}
                   <div style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",marginTop:5}}>Entered {pos.entryDate}</div>
                 </div>
                 <div style={{textAlign:"right"}}>
@@ -1165,7 +1231,7 @@ function Education(){
   const levelColor={Beginner:C.eucalyptus,Intermediate:C.warning,Advanced:C.navy};
   async function askAI(){
     if(!aiQ.trim()||aiLoading)return; setAiLoading(true); setAiA("");
-    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,system:"You are an agricultural commodity trading educator. The student is new to commodity trading and based in Australia. Give clear, educational answers using real market examples. 3-4 paragraphs max. Reference Australian context where relevant (Interactive Brokers AU, ASX-listed Ag stocks, ABARE, AU wheat exports).",messages:[{role:"user",content:aiQ}]})});const data=await res.json();setAiA(data.content?.map(b=>b.text||"").join("")||"Couldn't get a response.");}catch{setAiA("Connection error.");}
+    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,system:"You are an agricultural commodity trading educator. The student is new to commodity trading and based in Australia. Give clear, educational answers using real market examples. 3-4 paragraphs max. Reference Australian context where relevant (Interactive Brokers AU, ASX-listed Ag stocks, ABARE, AU wheat exports).",messages:[{role:"user",content:aiQ}]})});const data=await res.json();setAiA(data.content?.map(b=>b.text||"").join("")||"Couldn't get a response.");}catch{setAiA("Connection error.");}
     setAiLoading(false);
   }
   if(activeMod){
@@ -1182,7 +1248,7 @@ function Education(){
           <div>
             <Card style={{padding:22,marginBottom:14}}>
               <div style={{color:C.charcoal,fontSize:16,fontWeight:700,marginBottom:14}}>{sec.heading}</div>
-              {sec.content.split("\n\n").map((p,i)=><p key={i} style={{color:C.charcoal,fontSize:13,lineHeight:1.75,marginBottom:12}}>{p}</p>)}
+              {sec.content.split("\n\n").map((p,i)=><p key={i} style={{color:C.charcoal,fontSize:13,lineHeight:1.75,marginBottom:12,fontFamily:"'Lora',serif"}}>{p}</p>)}
             </Card>
             <div style={{display:"flex",justifyContent:"space-between"}}>
               <button onClick={()=>setActiveSec(s=>Math.max(0,s-1))} disabled={activeSec===0} style={{background:C.white,color:C.charcoal,border:`1px solid ${C.lightGrey}`,borderRadius:3,padding:"8px 16px",cursor:activeSec===0?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",opacity:activeSec===0?0.4:1}}>← PREVIOUS</button>
@@ -1218,7 +1284,7 @@ function Education(){
           ))}
         </div>
         {aiLoading&&<div style={{color:C.wheatDark,fontSize:12,fontFamily:"'DM Mono',monospace"}}><span style={{animation:"blink 1s infinite"}}>▋</span> Composing explanation...</div>}
-        {aiA&&<Card style={{padding:16,background:C.eggshell}}><div style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:8,letterSpacing:"0.12em"}}>◆ MUSTER TUTOR</div><div style={{color:C.charcoal,fontSize:13,lineHeight:1.7}}>{aiA}</div></Card>}
+        {aiA&&<Card style={{padding:16,background:C.eggshell}}><div style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:8,letterSpacing:"0.12em"}}>◆ MUSTER TUTOR</div><div style={{color:C.charcoal,fontSize:13,lineHeight:1.7,fontFamily:"'Lora',serif"}}>{aiA}</div></Card>}
       </Card>
     </div>
   );
@@ -1245,7 +1311,7 @@ function TradeJournal(){
   async function getReview(entry){
     setAiReview("loading"); setAiLoading(true);
     const comm=COMMODITIES.find(c=>c.symbol===entry.commodity);
-    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:"You are a commodity trading coach reviewing a student's trade journal entry. The student is new to commodity trading. Give constructive, educational feedback on their analysis and thinking. Be specific and actionable. 3 paragraphs max.",messages:[{role:"user",content:`Review this trade: ${comm?.name} ${entry.direction}, Result: ${entry.result}${entry.pnl?` ($${entry.pnl})`:""}.\n\nPre-trade: ${entry.preAnalysis}\n\nPost-trade: ${entry.postAnalysis||"None written."}\n\nReview the quality of thinking, what was done well, and what could be improved.`}]})});const data=await res.json();setAiReview(data.content?.map(b=>b.text||"").join("")||"Couldn't get response.");}catch{setAiReview("Connection error.");}
+    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:"You are a commodity trading coach reviewing a student's trade journal entry. The student is new to commodity trading. Give constructive, educational feedback on their analysis and thinking. Be specific and actionable. 3 paragraphs max.",messages:[{role:"user",content:`Review this trade: ${comm?.name} ${entry.direction}, Result: ${entry.result}${entry.pnl?` ($${entry.pnl})`:""}.\n\nPre-trade: ${entry.preAnalysis}\n\nPost-trade: ${entry.postAnalysis||"None written."}\n\nReview the quality of thinking, what was done well, and what could be improved.`}]})});const data=await res.json();setAiReview(data.content?.map(b=>b.text||"").join("")||"Couldn't get response.");}catch{setAiReview("Connection error.");}
     setAiLoading(false);
   }
   const wins=entries.filter(e=>e.result==="win").length; const losses=entries.filter(e=>e.result==="loss").length;
@@ -1302,11 +1368,11 @@ function TradeJournal(){
               {isActive&&(
                 <div style={{borderTop:`1px solid ${C.lightGrey}`,padding:16,background:C.offwhite}}>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-                    <div><div style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:5}}>PRE-TRADE ANALYSIS</div><div style={{color:C.charcoal,fontSize:12,lineHeight:1.65}}>{entry.preAnalysis}</div></div>
-                    <div><div style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:5}}>POST-TRADE NOTES</div>{entry.postAnalysis?<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65}}>{entry.postAnalysis}</div>:<div style={{color:C.lightGrey,fontSize:12,fontStyle:"italic"}}>No post-trade notes yet.</div>}</div>
+                    <div><div style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:5}}>PRE-TRADE ANALYSIS</div><div style={{color:C.charcoal,fontSize:12,lineHeight:1.65,fontFamily:"'Lora',serif"}}>{entry.preAnalysis}</div></div>
+                    <div><div style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:5}}>POST-TRADE NOTES</div>{entry.postAnalysis?<div style={{color:C.charcoal,fontSize:12,lineHeight:1.65,fontFamily:"'Lora',serif"}}>{entry.postAnalysis}</div>:<div style={{color:C.lightGrey,fontSize:12,fontStyle:"italic",fontFamily:"'Lora',serif"}}>No post-trade notes yet.</div>}</div>
                   </div>
                   <button onClick={()=>getReview(entry)} disabled={aiLoading} style={{background:C.navy,color:C.white,border:"none",borderRadius:3,padding:"7px 14px",cursor:aiLoading?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:10}}>{aiLoading?"REVIEWING...":"◆ GET AI COACHING REVIEW"}</button>
-                  {aiReview&&aiReview!=="loading"&&<Card style={{padding:14,background:C.eggshell}}><div style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:6,letterSpacing:"0.12em"}}>◆ AI COACHING REVIEW</div><div style={{color:C.charcoal,fontSize:13,lineHeight:1.7}}>{aiReview}</div></Card>}
+                  {aiReview&&aiReview!=="loading"&&<Card style={{padding:14,background:C.eggshell}}><div style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:6,letterSpacing:"0.12em"}}>◆ AI COACHING REVIEW</div><div style={{color:C.charcoal,fontSize:13,lineHeight:1.7,fontFamily:"'Lora',serif"}}>{aiReview}</div></Card>}
                   {aiLoading&&<div style={{color:C.wheatDark,fontSize:12,fontFamily:"'DM Mono',monospace"}}><span style={{animation:"blink 1s infinite"}}>▋</span> Reviewing your trade...</div>}
                 </div>
               )}
@@ -1376,11 +1442,16 @@ function Alerts(){
 // WEATHER + CURRENCIES + REPORTS (full tabs)
 // ─────────────────────────────────────────────────────────────────────────────
 function WeatherTab(){
+  const [weatherData,setWeatherData]=useState(WEATHER_DATA);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    fetchWeatherData().then(data=>{setWeatherData(data);setLoading(false);}).catch(()=>setLoading(false));
+  },[]);
   return (
     <div>
-      <SectionHead label="GLOBAL AG WEATHER MONITOR" sub="Key growing regions · Open-Meteo API hook ready"/>
+      <SectionHead label="GLOBAL AG WEATHER MONITOR" sub={loading?"Loading live data from Open-Meteo…":"Live data · Open-Meteo · Updates every 5 min"}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:10,marginBottom:20}}>
-        {WEATHER_DATA.map((w,i)=>{const col=w.severity==="severe"?C.negative:w.severity==="moderate"?C.warning:C.eucalyptus; return(
+        {weatherData.map((w,i)=>{const col=w.severity==="severe"?C.negative:w.severity==="moderate"?C.warning:C.eucalyptus; return(
           <Card key={i} style={{borderLeft:`4px solid ${col}`,padding:16}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:22}}>{w.icon}</span><span style={{fontSize:9,padding:"2px 8px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:col,background:C.eggshell,border:`1px solid ${col}`}}>{w.severity.toUpperCase()}</span></div>
             <div style={{color:C.charcoal,fontSize:14,fontWeight:600,marginBottom:3}}>{w.region}</div>
@@ -1419,16 +1490,21 @@ function WeatherTab(){
 }
 
 function CurrenciesTab(){
+  const [currData,setCurrData]=useState(CURRENCIES_DATA);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    fetchCurrenciesData().then(data=>{setCurrData(data);setLoading(false);}).catch(()=>setLoading(false));
+  },[]);
   return (
     <div>
-      <SectionHead label="CURRENCIES & AG EXPORT IMPACT" sub="FRED API hook ready for live rates"/>
+      <SectionHead label="CURRENCIES & AG EXPORT IMPACT" sub={loading?"Loading live rates from FRED…":"Live rates · FRED · Updates every 5 min"}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10,marginBottom:22}}>
-        {CURRENCIES_DATA.map((c,i)=>(
+        {currData.map((c,i)=>(
           <Card key={i} style={{borderTop:`3px solid ${c.bull?C.eucalyptus:C.negative}`,padding:16}}>
             <div style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:4}}>{c.name}</div>
             <div style={{color:C.navy,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.1em",marginBottom:6}}>{c.pair}</div>
-            <div style={{color:C.charcoal,fontSize:24,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:3}}>{c.value}</div>
-            <div style={{color:c.pct>0?(c.pair==="DXY"?C.negative:C.eucalyptus):C.eucalyptus,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:10}}>{c.pct>0?"+":""}{c.pct.toFixed(2)}%</div>
+            <div style={{color:C.charcoal,fontSize:24,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:3}}>{c.value!==null?c.value:"—"}</div>
+            <div style={{color:c.pct!=null&&c.pct>0?(c.pair==="DXY"?C.negative:C.eucalyptus):C.eucalyptus,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:10}}>{c.pct!=null?(c.pct>0?"+":"")+c.pct.toFixed(2)+"%":"—"}</div>
             <div style={{color:C.charcoal,fontSize:11,padding:"6px 9px",background:c.bull?C.eucalyptusPale:C.negativePale,borderRadius:2,borderLeft:`3px solid ${c.bull?C.eucalyptus:C.negative}`,marginBottom:8}}>{c.impact}</div>
             <a href={`https://fred.stlouisfed.org/series/${c.fredId}`} target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none"}}>Source: FRED →</a>
           </Card>
@@ -1487,7 +1563,15 @@ function ReportsTab(){
 export default function Muster() {
   const [tab,setTab]=useState("home");
   const [time,setTime]=useState(new Date());
+  const [refreshKey,setRefreshKey]=useState(0);
   useEffect(()=>{const t=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(t);},[]);
+  // Global data refresh — runs on mount and every 5 minutes
+  useEffect(()=>{
+    const refresh=()=>{setRefreshKey(k=>k+1);};
+    refresh();
+    const interval=setInterval(refresh,300000);
+    return()=>clearInterval(interval);
+  },[]);
 
   const TABS=[
     {id:"home",     label:"HOME",          emoji:"🏠"},
@@ -1506,12 +1590,15 @@ export default function Muster() {
     {id:"education",label:"EDUCATION",     emoji:"📚"},
     {id:"journal",  label:"JOURNAL",       emoji:"📓"},
     {id:"alerts",   label:"ALERTS",        emoji:"🔔"},
+    {id:"australia",label:"AUSTRALIA",      emoji:"🦘"},
+    {id:"intel",    label:"INTELLIGENCE",  emoji:"🧠"},
+    {id:"autotrader",label:"AUTO TRADER",  emoji:"🤖"},
   ];
 
   return (
-    <div style={{background:C.eggshell,minHeight:"100vh",color:C.charcoal,fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{background:C.eggshell,minHeight:"100vh",color:C.charcoal,fontFamily:"'IBM Plex Sans',sans-serif"}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap');
         @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -1570,8 +1657,8 @@ export default function Muster() {
         {tab==="seasonal"  && <Seasonals/>}
         {tab==="cot"       && <COTCharts/>}
         {tab==="backtest"  && <Backtesting/>}
-        {tab==="weather"   && <WeatherTab/>}
-        {tab==="currencies"&& <CurrenciesTab/>}
+        {tab==="weather"   && <WeatherTab key={refreshKey}/>}
+        {tab==="currencies"&& <CurrenciesTab key={refreshKey}/>}
         {tab==="reports"   && <ReportsTab/>}
         {tab==="scorecard" && <Scorecard/>}
         {tab==="portfolio" && <Portfolio/>}
@@ -1579,6 +1666,9 @@ export default function Muster() {
         {tab==="education" && <Education/>}
         {tab==="journal"   && <TradeJournal/>}
         {tab==="alerts"    && <Alerts/>}
+        {tab==="australia" && <AustraliaTab/>}
+        {tab==="intel"     && <IntelligenceFeed key={refreshKey}/>}
+        {tab==="autotrader"&& <AutoTrader/>}
       </div>
 
       {/* FOOTER */}
