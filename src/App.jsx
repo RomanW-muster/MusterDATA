@@ -213,27 +213,59 @@ async function fetchWeatherData() {
   });
 }
 
+let _prevERRates = null;
+
 async function fetchCurrenciesData() {
-  const results = await Promise.all(
-    CURRENCIES_META.map(m =>
-      fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${m.fredId}`)
-        .then(r => r.ok ? r.text() : null)
-        .catch(() => null)
-    )
-  );
-  return CURRENCIES_META.map((m, i) => {
-    const text = results[i];
-    if (!text) return { ...m, value: null, change: null, pct: null, live: false };
-    const rows = text.trim().split('\n').slice(1)
-      .map(row => { const v = parseFloat(row.split(',')[1]); return isNaN(v) ? null : v; })
-      .filter(v => v !== null);
-    if (!rows.length) return { ...m, value: null, change: null, pct: null, live: false };
-    const current = rows[rows.length - 1];
-    const prev = rows.length > 1 ? rows[rows.length - 2] : null;
-    const change = prev !== null ? current - prev : null;
-    const pct = prev !== null && prev !== 0 ? (change / prev) * 100 : null;
-    return { ...m, value: parseFloat(current.toFixed(4)), change, pct, live: true };
-  });
+  try {
+    const r = await fetch("https://open.er-api.com/v6/latest/USD");
+    if (!r.ok) return null;
+    const data = await r.json();
+    const rates = data.rates;
+    if (!rates) return null;
+
+    const calcDXY = (rt) => 50.14348112
+      * Math.pow(rt.EUR || 1, 0.576)
+      * Math.pow(rt.JPY || 1, 0.136)
+      * Math.pow(rt.GBP || 1, 0.119)
+      * Math.pow(rt.CAD || 1, 0.091)
+      * Math.pow(rt.SEK || 1, 0.042)
+      * Math.pow(rt.CHF || 1, 0.036);
+
+    const getVal = (pair, rt) => {
+      switch (pair) {
+        case "DXY":     return calcDXY(rt);
+        case "EUR/USD": return rt.EUR ? 1 / rt.EUR : null;
+        case "GBP/USD": return rt.GBP ? 1 / rt.GBP : null;
+        case "AUD/USD": return rt.AUD ? 1 / rt.AUD : null;
+        case "NZD/USD": return rt.NZD ? 1 / rt.NZD : null;
+        case "USD/JPY": return rt.JPY || null;
+        case "USD/CAD": return rt.CAD || null;
+        case "USD/BRL": return rt.BRL || null;
+        case "USD/ARS": return rt.ARS || null;
+        case "USD/MXN": return rt.MXN || null;
+        case "USD/CNY": return rt.CNY || null;
+        case "USD/INR": return rt.INR || null;
+        case "USD/IDR": return rt.IDR || null;
+        case "USD/MYR": return rt.MYR || null;
+        case "USD/THB": return rt.THB || null;
+        case "USD/ZAR": return rt.ZAR || null;
+        default: return null;
+      }
+    };
+
+    const prev = _prevERRates;
+    _prevERRates = rates;
+
+    return CURRENCIES_META.map(m => {
+      const value = getVal(m.pair, rates);
+      const prevValue = prev ? getVal(m.pair, prev) : null;
+      const change = value != null && prevValue != null ? value - prevValue : null;
+      const pct = change != null && prevValue ? (change / prevValue) * 100 : null;
+      return { ...m, value: value != null ? parseFloat(value.toFixed(4)) : null, change, pct, live: value != null };
+    });
+  } catch {
+    return null;
+  }
 }
 
 const WASDE_DATA = {
@@ -814,14 +846,14 @@ function HomePage(){
       </div>
 
       {/* Bottom: News + Sidebar */}
-      <div style={{display:"grid",gridTemplateColumns:"1.4fr 0.8fr",gap:20,alignItems:"start"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:20,alignItems:"start"}}>
 
         {/* Top 5 news */}
-        <div>
+        <div style={{display:"flex",flexDirection:"column",alignSelf:"stretch"}}>
           <SectionHead label="TOP STORIES" sub="Click headline to read full article"/>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{display:"flex",flexDirection:"column",gap:8,flex:1}}>
             {NEWS.slice(0,5).map(n=>(
-              <Card key={n.id} style={{borderLeft:`3px solid ${n.bullish?C.eucalyptus:C.negative}`,padding:"13px 16px",display:"flex",flexDirection:"column"}}
+              <Card key={n.id} style={{borderLeft:`3px solid ${n.bullish?C.eucalyptus:C.negative}`,padding:"13px 16px",display:"flex",flexDirection:"column",flex:1}}
                 onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.07)"}
                 onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
                 <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
@@ -843,7 +875,7 @@ function HomePage(){
         </div>
 
         {/* Right sidebar */}
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div style={{display:"flex",flexDirection:"column",gap:16,position:"sticky",top:0,maxHeight:"calc(100vh - 160px)",overflowY:"auto"}}>
 
           {/* Upcoming reports */}
           <div>
@@ -1543,7 +1575,7 @@ function CurrenciesTab(){
   useEffect(()=>{
     let cancelled=false;
     function load(){
-      fetchCurrenciesData().then(data=>{if(!cancelled){setCurrData(data);setLoading(false);}}).catch(()=>{if(!cancelled)setLoading(false);});
+      fetchCurrenciesData().then(data=>{if(!cancelled){if(data)setCurrData(data);setLoading(false);}}).catch(()=>{if(!cancelled)setLoading(false);});
     }
     load();
     const iv=setInterval(load,300000);
