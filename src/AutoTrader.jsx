@@ -206,8 +206,31 @@ Rules:
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+function generateLesson(scorecardData, signal, inst) {
+  if (!scorecardData) return "";
+  const vars = scorecardData.vars;
+  const bullish = Object.values(vars).filter(v=>v==="BULLISH").length;
+  const bearish = Object.values(vars).filter(v=>v==="BEARISH").length;
+  const bullVars = Object.entries(vars).filter(([,v])=>v==="BULLISH").map(([k])=>k.toUpperCase());
+  const bearVars = Object.entries(vars).filter(([,v])=>v==="BEARISH").map(([k])=>k.toUpperCase());
+
+  if (signal.action==="HOLD") {
+    if (bullish===bearish) return `This is a textbook mixed signal situation. With ${bullish} bullish and ${bearish} bearish factors, there is no clear edge. New traders often feel pressure to trade every instrument — but the highest-probability trades come from waiting for confluence. Patience is a position.`;
+    if (bullish > bearish) return `Despite a slight bullish lean (${bullVars.join(", ")}), the confidence threshold of 65% was not reached. The conflicting signals from ${bearVars.join(", ")} created enough uncertainty to justify staying flat. In commodity trading, a HOLD is not a missed opportunity — it is capital preservation.`;
+    return `Bearish signals from ${bearVars.join(", ")} dominate, but not enough to warrant a short position with high confidence. Commodity shorts require strong conviction because supply shocks can trigger violent counter-moves. Waiting for a cleaner setup is the professional approach.`;
+  }
+  if (signal.action==="BUY") {
+    return `A BUY signal with ${signal.confidence}% confidence was triggered by bullish alignment in ${bullVars.join(", ")}. Notice how multiple independent factors are pointing in the same direction — this is called confluence, and it is the foundation of high-probability commodity trading. The stop loss at ${signal.stopLoss?.toFixed(4)} defines your maximum risk before the thesis is invalidated.`;
+  }
+  return `A SELL signal with ${signal.confidence}% confidence was triggered by bearish pressure from ${bearVars.join(", ")}. Shorting commodities is inherently more dangerous than going long because supply disruptions (weather, policy) can cause sudden explosive rallies. Notice the tight stop placement — this reflects the asymmetric risk of short positions in physical commodities.`;
+}
+
 export default function AutoTrader() {
-  const INITIAL_CAPITAL = 10000;
+  const [fundSize, setFundSize] = useState(10000);
+  const [pendingFundSize, setPendingFundSize] = useState(null);
+  const [signalLog, setSignalLog] = useState([]);
+
+  const INITIAL_CAPITAL = fundSize;
 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isRunning, setIsRunning] = useState(false);
@@ -313,6 +336,19 @@ export default function AutoTrader() {
     }, ...prev.slice(0,99)]);
   }
 
+  function logSignal(inst, signal, executed, currentPrice) {
+    setSignalLog(prev => [{
+      id: Date.now(),
+      timestamp: new Date(),
+      instrument: inst,
+      signal,
+      scorecardData: SIGNAL_DATA[inst.symbol],
+      executed,
+      entryPrice: currentPrice,
+      lesson: generateLesson(SIGNAL_DATA[inst.symbol], signal, inst),
+    }, ...prev.slice(0, 199)]);
+  }
+
   // Price tick every 3 seconds when running
   useEffect(() => {
     if (isRunning) {
@@ -355,6 +391,7 @@ export default function AutoTrader() {
 
       if (signal.action === "HOLD" || signal.confidence < 65) {
         addLog(`${inst.emoji} ${inst.symbol} — HOLD (confidence: ${signal.confidence}%)`, "info");
+        logSignal(inst, signal, false, prices[inst.symbol]?.current || inst.price);
         continue;
       }
 
@@ -394,6 +431,7 @@ export default function AutoTrader() {
       }));
       addLog(`✅ EXECUTED: ${signal.action} ${contracts}x ${inst.symbol} @ ${currentPrice.toFixed(4)} | SL: ${signal.stopLoss.toFixed(4)} | TP: ${signal.takeProfit.toFixed(4)} | Confidence: ${signal.confidence}%`, "success");
       addLog(`   Reasoning: ${signal.reasoning}`, "reasoning");
+      logSignal(inst, signal, true, currentPrice);
     }
     setLastScan(new Date());
   }
@@ -444,21 +482,23 @@ export default function AutoTrader() {
     });
   }
 
-  function resetPortfolio() {
-    setPortfolio({
-      cash:INITIAL_CAPITAL, initialCapital:INITIAL_CAPITAL, positions:[], closedTrades:[],
-      pnlHistory:[INITIAL_CAPITAL], dailyLossLimit:INITIAL_CAPITAL*0.05, dailyLoss:0,
-      halted:false, haltReason:"", lastSignalTime:null, signalInterval:30,
-    });
+  function resetPortfolio(capital) {
+    const cap = capital ?? fundSize;
+    setPortfolio(prev => ({
+      cash:cap, initialCapital:cap, positions:[], closedTrades:[],
+      pnlHistory:[cap], dailyLossLimit:cap*0.05, dailyLoss:0,
+      halted:false, haltReason:"", lastSignalTime:null, signalInterval:prev.signalInterval||30,
+    }));
     setLog([]);
+    setSignalLog([]);
     setIsRunning(false);
-    addLog("Portfolio reset to $10,000", "info");
+    addLog(`Portfolio reset to $${cap.toLocaleString()}`, "info");
   }
 
   // ─── COMPUTED STATS ─────────────────────────────────────────────────────────
   const totalEquity = portfolio.cash + portfolio.positions.reduce((s,p)=>s+(p.unrealisedPnL||0),0);
-  const totalReturn = totalEquity - INITIAL_CAPITAL;
-  const returnPct = (totalReturn / INITIAL_CAPITAL) * 100;
+  const totalReturn = totalEquity - portfolio.initialCapital;
+  const returnPct = portfolio.initialCapital > 0 ? (totalReturn / portfolio.initialCapital) * 100 : 0;
   const wins = portfolio.closedTrades.filter(t=>t.closePnL>0).length;
   const losses = portfolio.closedTrades.filter(t=>t.closePnL<=0).length;
   const winRate = portfolio.closedTrades.length > 0 ? (wins/portfolio.closedTrades.length*100) : 0;
@@ -476,6 +516,7 @@ export default function AutoTrader() {
     { id:"positions", label:"POSITIONS" },
     { id:"scanner",   label:"SCANNER"   },
     { id:"history",   label:"TRADE LOG" },
+    { id:"reasoning", label:"REASONING" },
     { id:"settings",  label:"SETTINGS"  },
   ];
 
@@ -497,7 +538,7 @@ export default function AutoTrader() {
             <div>
               <div style={{color:C.wheat,fontSize:18,fontWeight:700,fontFamily:"'DM Mono',monospace",letterSpacing:"0.12em"}}>AUTO TRADER</div>
               <div style={{color:"rgba(255,255,255,0.55)",fontSize:11,fontFamily:"'DM Mono',monospace"}}>
-                Paper Trading Mode · $10,000 Test Fund · Claude Signal Engine
+                Paper Trading Mode · ${fundSize.toLocaleString()} Fund · Claude Signal Engine
               </div>
             </div>
           </div>
@@ -530,9 +571,10 @@ export default function AutoTrader() {
         </div>
 
         {/* Key metrics */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:10}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(9,1fr)",gap:10}}>
           {[
-            {l:"PORTFOLIO VALUE",  v:`$${totalEquity.toFixed(0)}`,           c:totalReturn>=0?C.wheat:"#f87171"},
+            {l:"FUND SIZE",        v:`$${fundSize.toLocaleString()}`,         c:"rgba(255,255,255,0.55)"},
+            {l:"PORTFOLIO VALUE",  v:`$${totalEquity.toFixed(0)}`,            c:totalReturn>=0?C.wheat:"#f87171"},
             {l:"TOTAL RETURN",     v:`${totalReturn>=0?"+":""}$${totalReturn.toFixed(0)}`, c:totalReturn>=0?"#7de8a0":"#f87171"},
             {l:"RETURN %",         v:`${returnPct>=0?"+":""}${returnPct.toFixed(2)}%`,     c:totalReturn>=0?"#7de8a0":"#f87171"},
             {l:"OPEN POSITIONS",   v:portfolio.positions.length,              c:C.wheat},
@@ -569,7 +611,7 @@ export default function AutoTrader() {
           <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:18,marginBottom:18}}>
             {/* P&L curve */}
             <Card style={{padding:18}}>
-              <SectionHead label="PORTFOLIO P&L CURVE" sub={`${portfolio.pnlHistory.length-1} data points · Started at $${INITIAL_CAPITAL.toLocaleString()}`}/>
+              <SectionHead label="PORTFOLIO P&L CURVE" sub={`${portfolio.pnlHistory.length-1} data points · Started at $${portfolio.initialCapital.toLocaleString()}`}/>
               <PnLCurve history={portfolio.pnlHistory}/>
               <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
                 <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>Start</span>
@@ -808,15 +850,180 @@ export default function AutoTrader() {
         </div>
       )}
 
+      {/* ─── REASONING CENTRE ─── */}
+      {activeTab==="reasoning" && (
+        <div style={{animation:"fadeIn 0.2s ease"}}>
+          <SectionHead label="REASONING CENTRE" sub={`${signalLog.length} signals logged · Every Claude decision explained`}/>
+          {signalLog.length===0 ? (
+            <Card style={{padding:40,textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:10}}>🧠</div>
+              <div style={{color:C.wheatDark,fontSize:13,fontFamily:"'Lora',serif",lineHeight:1.6}}>No signals yet. Start the Auto Trader or run a manual signal from the Scanner tab — every signal Claude generates will appear here with a full breakdown and trading lesson.</div>
+            </Card>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              {signalLog.map(entry=>{
+                const sig = entry.signal;
+                const sd = entry.scorecardData;
+                const inst = entry.instrument;
+                const actionColor = sig.action==="BUY"?C.eucalyptus:sig.action==="SELL"?C.negative:C.wheatDark;
+                const varColor = v=>v==="BULLISH"?C.eucalyptus:v==="BEARISH"?C.negative:C.lightGrey;
+                const varBg = v=>v==="BULLISH"?C.eucalyptusPale:v==="BEARISH"?C.negativePale:C.offwhite;
+                return (
+                  <Card key={entry.id} style={{padding:0,overflow:"hidden",borderLeft:`4px solid ${actionColor}`}}>
+                    {/* Signal header */}
+                    <div style={{background:C.offwhite,padding:"14px 20px",borderBottom:`1px solid ${C.lightGrey}`,display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+                      <span style={{fontSize:24}}>{inst.emoji}</span>
+                      <div style={{flex:1}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:4}}>
+                          <span style={{color:C.charcoal,fontSize:15,fontWeight:700}}>{inst.name}</span>
+                          <span style={{fontSize:10,padding:"3px 8px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:C.white,background:actionColor,letterSpacing:"0.08em"}}>{sig.action}</span>
+                          {entry.executed&&<span style={{fontSize:9,padding:"2px 6px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.eucalyptus,background:C.eucalyptusPale,fontWeight:600}}>EXECUTED</span>}
+                          {!entry.executed&&sig.action!=="HOLD"&&<span style={{fontSize:9,padding:"2px 6px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.warning,background:C.warningPale,fontWeight:600}}>LOW CONFIDENCE</span>}
+                          <span style={{color:C.lightGrey,fontSize:10,fontFamily:"'DM Mono',monospace"}}>{entry.timestamp.toLocaleString("en-AU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
+                        </div>
+                        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                          {[["SYMBOL",inst.symbol],["SECTOR",inst.sector],["PRICE",entry.entryPrice?.toFixed(4)],["CONFIDENCE",`${sig.confidence}%`],["TIMEFRAME",(sig.timeframe||"").toUpperCase()]].map(([l,v])=>(
+                            <div key={l}><span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>{l} </span><span style={{color:C.navy,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</span></div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Confidence bar */}
+                      <div style={{textAlign:"center",minWidth:60}}>
+                        <div style={{color:actionColor,fontSize:22,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{sig.confidence}%</div>
+                        <div style={{width:60,height:4,background:C.lightGrey,borderRadius:2,marginTop:4}}>
+                          <div style={{width:`${sig.confidence}%`,height:"100%",background:actionColor,borderRadius:2}}/>
+                        </div>
+                        <div style={{color:C.lightGrey,fontSize:8,fontFamily:"'DM Mono',monospace",marginTop:3}}>CONFIDENCE</div>
+                      </div>
+                    </div>
+
+                    <div style={{padding:"18px 20px"}}>
+                      {/* Scorecard variables */}
+                      <div style={{marginBottom:18}}>
+                        <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:10}}>SCORECARD BREAKDOWN — {sd?.score||"?"}/100 OVERALL</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8}}>
+                          {sd && Object.entries(sd.vars).map(([key,val])=>(
+                            <div key={key} style={{background:varBg(val),border:`1px solid ${varColor(val)}33`,borderRadius:3,padding:"8px 10px",textAlign:"center"}}>
+                              <div style={{color:C.charcoal,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:5,letterSpacing:"0.06em"}}>{key.toUpperCase()}</div>
+                              <div style={{color:varColor(val),fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{val}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Risk parameters (executed trades) */}
+                      {sig.action!=="HOLD" && (
+                        <div style={{marginBottom:18,padding:"12px 14px",background:C.offwhite,borderRadius:3,border:`1px solid ${C.lightGrey}`}}>
+                          <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:10}}>RISK PARAMETERS</div>
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
+                            {[["ENTRY",entry.entryPrice?.toFixed(4),C.charcoal],["STOP LOSS",sig.stopLoss?.toFixed(4),C.negative],["TAKE PROFIT",sig.takeProfit?.toFixed(4),C.eucalyptus],["RISK %",`${sig.riskPercent?.toFixed(1)}%`,C.warning],["CONTRACTS",sig.contracts,C.navy]].map(([l,v,c])=>(
+                              <div key={l}><div style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:3}}>{l}</div><div style={{color:c,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{v}</div></div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Claude's reasoning */}
+                      <div style={{marginBottom:16}}>
+                        <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:8}}>◆ CLAUDE'S REASONING</div>
+                        <div style={{color:C.charcoal,fontSize:13,lineHeight:1.75,fontFamily:"'Lora',serif",padding:"12px 16px",background:C.navyPale,borderRadius:3,borderLeft:`3px solid ${C.navy}`}}>{sig.reasoning}</div>
+                      </div>
+
+                      {/* What would change the signal */}
+                      {sig.action==="HOLD" && (
+                        <div style={{marginBottom:16,padding:"10px 14px",background:C.wheatPale,borderRadius:3,border:`1px solid ${C.wheat}44`}}>
+                          <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:6}}>WHAT WOULD TRIGGER AN ENTRY?</div>
+                          <div style={{color:C.charcoal,fontSize:12,fontFamily:"'Lora',serif",lineHeight:1.65}}>
+                            {sd && (() => {
+                              const bearVars = Object.entries(sd.vars).filter(([,v])=>v==="BEARISH").map(([k])=>k);
+                              const neutralVars = Object.entries(sd.vars).filter(([,v])=>v==="NEUTRAL").map(([k])=>k);
+                              if (bearVars.length > 0) return `A shift in ${bearVars.map(v=>v.toUpperCase()).join(" or ")} from BEARISH to BULLISH or NEUTRAL would improve confluence and potentially push confidence above the 65% entry threshold.`;
+                              if (neutralVars.length > 0) return `If ${neutralVars.map(v=>v.toUpperCase()).join(" or ")} turned BULLISH, the scorecard would show stronger directional alignment and a BUY signal would be likely.`;
+                              return "Monitor for a catalyst that breaks the current stalemate — a WASDE report, weather event, or significant COT positioning shift.";
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Trading lesson */}
+                      <div style={{padding:"14px 16px",background:C.eucalyptusPale,borderRadius:3,borderLeft:`3px solid ${C.eucalyptus}`}}>
+                        <div style={{color:C.eucalyptus,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.12em",marginBottom:8}}>📚 WHAT A NEW TRADER SHOULD LEARN FROM THIS</div>
+                        <div style={{color:C.charcoal,fontSize:13,lineHeight:1.75,fontFamily:"'Lora',serif"}}>{entry.lesson}</div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ─── SETTINGS ─── */}
       {activeTab==="settings" && (
         <div style={{animation:"fadeIn 0.2s ease"}}>
           <SectionHead label="TRADING SETTINGS"/>
+
+          {/* Fund size confirmation dialog */}
+          {pendingFundSize && (
+            <Card style={{padding:18,marginBottom:18,background:C.warningPale,border:`2px solid ${C.warning}`}}>
+              <div style={{color:C.warning,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:8}}>⚠ CONFIRM PORTFOLIO RESET</div>
+              <div style={{color:C.charcoal,fontSize:13,fontFamily:"'Lora',serif",lineHeight:1.6,marginBottom:14}}>Changing the fund size to <strong>${pendingFundSize.toLocaleString()}</strong> will reset your entire portfolio — all open positions, trade history, and the P&L curve will be cleared. This cannot be undone.</div>
+              <div style={{display:"flex",gap:10}}>
+                <Btn variant="red" onClick={()=>{ setFundSize(pendingFundSize); resetPortfolio(pendingFundSize); setPendingFundSize(null); }}>CONFIRM — RESET TO ${pendingFundSize.toLocaleString()}</Btn>
+                <Btn variant="outline" onClick={()=>setPendingFundSize(null)}>CANCEL</Btn>
+              </div>
+            </Card>
+          )}
+
+          {/* Fund size selector */}
+          <Card style={{padding:20,marginBottom:18,borderTop:`3px solid ${C.eucalyptus}`}}>
+            <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:4}}>Paper Trading Fund Size</div>
+            <div style={{color:C.wheatDark,fontSize:11,fontFamily:"'Lora',serif",marginBottom:16}}>Set your starting capital. Changing this will reset the portfolio.</div>
+            <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:200}}>
+                <input type="range" min={1000} max={100000} step={1000} value={pendingFundSize??fundSize}
+                  onChange={e=>setPendingFundSize(Number(e.target.value))}
+                  style={{width:"100%",accentColor:C.eucalyptus}}
+                />
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+                  <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>$1,000</span>
+                  <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>$100,000</span>
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace"}}>$</span>
+                <input type="number" min={1000} max={100000} step={1000} value={pendingFundSize??fundSize}
+                  onChange={e=>setPendingFundSize(Math.min(100000,Math.max(1000,Number(e.target.value))))}
+                  style={{width:110,padding:"7px 10px",border:`1px solid ${C.lightGrey}`,borderRadius:3,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700,color:C.navy}}
+                />
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[1000,5000,10000,25000,50000,100000].map(v=>(
+                  <button key={v} onClick={()=>setPendingFundSize(v)}
+                    style={{background:fundSize===v&&!pendingFundSize?C.eucalyptus:pendingFundSize===v?C.navy:C.white,
+                      color:fundSize===v&&!pendingFundSize||pendingFundSize===v?C.white:C.charcoal,
+                      border:`1px solid ${fundSize===v&&!pendingFundSize?C.eucalyptus:C.lightGrey}`,
+                      borderRadius:3,padding:"6px 12px",cursor:"pointer",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
+                    ${v>=1000?`${v/1000}k`:v}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {pendingFundSize && pendingFundSize !== fundSize && (
+              <div style={{marginTop:12,display:"flex",gap:10,alignItems:"center"}}>
+                <div style={{color:C.warning,fontSize:11,fontFamily:"'DM Mono',monospace"}}>↳ New fund size: ${pendingFundSize.toLocaleString()} — click confirm above or apply here</div>
+                <Btn variant="navy" style={{fontSize:10,padding:"6px 14px"}} onClick={()=>{ setFundSize(pendingFundSize); resetPortfolio(pendingFundSize); setPendingFundSize(null); }}>APPLY & RESET</Btn>
+                <Btn variant="outline" style={{fontSize:10,padding:"6px 14px"}} onClick={()=>setPendingFundSize(null)}>CANCEL</Btn>
+              </div>
+            )}
+          </Card>
+
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginBottom:18}}>
             <Card style={{padding:20}}>
               <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:14}}>Risk Management</div>
               {[
-                {l:"Starting Capital",     v:`$${INITIAL_CAPITAL.toLocaleString()}`, note:"Set at initialisation"},
+                {l:"Starting Capital",     v:`$${portfolio.initialCapital.toLocaleString()}`, note:"Set at initialisation"},
                 {l:"Daily Loss Limit",     v:`$${portfolio.dailyLossLimit.toFixed(0)} (5% of capital)`, note:"Trading halts if breached"},
                 {l:"Max Open Positions",   v:"5", note:"Prevents overexposure"},
                 {l:"Min Signal Confidence",v:"65%", note:"Below this = HOLD"},

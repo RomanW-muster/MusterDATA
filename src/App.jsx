@@ -166,30 +166,52 @@ async function fetchWeatherData() {
   });
 }
 
-function parseFredCsv(csv) {
-  const lines = csv.trim().split("\n").filter(l => l && !l.startsWith("DATE"));
-  const valid = lines.filter(l => {
-    const parts = l.split(",");
-    return parts[1] && parts[1].trim() !== ".";
-  });
-  if (valid.length < 2) return { value: null, change: null, pct: null };
-  const latest = parseFloat(valid[valid.length - 1].split(",")[1]);
-  const prev = parseFloat(valid[valid.length - 2].split(",")[1]);
-  const change = latest - prev;
-  const pct = prev !== 0 ? (change / prev) * 100 : 0;
-  return { value: latest, change, pct };
+function calcDXY(r) {
+  // Official DXY formula: weighted geometric mean against 6 currencies
+  return 50.14348112
+    * Math.pow(1/r.eur, 0.576)
+    * Math.pow(r.jpy,   0.136)
+    * Math.pow(1/r.gbp, 0.119)
+    * Math.pow(r.cad,   0.091)
+    * Math.pow(r.sek,   0.042)
+    * Math.pow(r.chf,   0.036);
 }
 
 async function fetchCurrenciesData() {
-  const results = await Promise.all(
-    CURRENCIES_META.map(m =>
-      fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${m.fredId}`)
-        .then(r => r.text())
-        .then(csv => parseFredCsv(csv))
-        .catch(() => ({ value: null, change: null, pct: null }))
-    )
-  );
-  return CURRENCIES_META.map((m, i) => ({ ...m, ...results[i] }));
+  const BASE = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api";
+  // Get today and yesterday for % change
+  const [today, yesterday] = await Promise.all([
+    fetch(`${BASE}@latest/v1/currencies/usd.json`).then(r=>r.json()).catch(()=>null),
+    fetch(`${BASE}@${(() => { const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })()}/v1/currencies/usd.json`).then(r=>r.json()).catch(()=>null),
+  ]);
+
+  if (!today) {
+    console.error("Currency fetch failed");
+    return CURRENCIES_META.map(m=>({...m, value:null, change:null, pct:null}));
+  }
+
+  const t = today.usd;
+  const y = yesterday?.usd;
+
+  const calc = (val, prevVal) => {
+    if (val == null) return { value: null, change: null, pct: null };
+    const change = prevVal != null ? val - prevVal : null;
+    const pct    = prevVal != null && prevVal !== 0 ? (change / prevVal) * 100 : null;
+    return { value: parseFloat(val.toFixed(4)), change, pct };
+  };
+
+  const dxyNow  = t ? calcDXY(t) : null;
+  const dxyPrev = y ? calcDXY(y) : null;
+
+  const lookup = {
+    "DXY":     calc(dxyNow, dxyPrev),
+    "BRL/USD": calc(t?.brl ? 1/t.brl : null, y?.brl ? 1/y.brl : null),
+    "ARS/USD": calc(t?.ars ? 1/t.ars : null, y?.ars ? 1/y.ars : null),
+    "EUR/USD": calc(t?.eur ? 1/t.eur : null, y?.eur ? 1/y.eur : null),
+    "AUD/USD": calc(t?.aud ? 1/t.aud : null, y?.aud ? 1/y.aud : null),
+  };
+
+  return CURRENCIES_META.map(m => ({ ...m, ...lookup[m.pair] }));
 }
 
 const WASDE_DATA = {
@@ -1497,7 +1519,7 @@ function CurrenciesTab(){
   },[]);
   return (
     <div>
-      <SectionHead label="CURRENCIES & AG EXPORT IMPACT" sub={loading?"Loading live rates from FRED…":"Live rates · FRED · Updates every 5 min"}/>
+      <SectionHead label="CURRENCIES & AG EXPORT IMPACT" sub={loading?"Loading live rates…":"Live rates · Updates every 5 min"}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10,marginBottom:22}}>
         {currData.map((c,i)=>(
           <Card key={i} style={{borderTop:`3px solid ${c.bull?C.eucalyptus:C.negative}`,padding:16}}>
@@ -1506,7 +1528,7 @@ function CurrenciesTab(){
             <div style={{color:C.charcoal,fontSize:24,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:3}}>{c.value!==null?c.value:"—"}</div>
             <div style={{color:c.pct!=null&&c.pct>0?(c.pair==="DXY"?C.negative:C.eucalyptus):C.eucalyptus,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:10}}>{c.pct!=null?(c.pct>0?"+":"")+c.pct.toFixed(2)+"%":"—"}</div>
             <div style={{color:C.charcoal,fontSize:11,padding:"6px 9px",background:c.bull?C.eucalyptusPale:C.negativePale,borderRadius:2,borderLeft:`3px solid ${c.bull?C.eucalyptus:C.negative}`,marginBottom:8}}>{c.impact}</div>
-            <a href={`https://fred.stlouisfed.org/series/${c.fredId}`} target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none"}}>Source: FRED →</a>
+            <a href="https://github.com/fawazahmed0/exchange-api" target="_blank" rel="noopener noreferrer" style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",textDecoration:"none"}}>Source: Exchange API →</a>
           </Card>
         ))}
       </div>
@@ -1562,8 +1584,12 @@ function ReportsTab(){
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Muster() {
   const [tab,setTab]=useState("home");
+  const [subTabMemory,setSubTabMemory]=useState({markets:"charts",intelligence:"intel",trading:"scorecard",learn:"education"});
   const [time,setTime]=useState(new Date());
   const [refreshKey,setRefreshKey]=useState(0);
+  const [searchQuery,setSearchQuery]=useState("");
+  const [searchCursor,setSearchCursor]=useState(-1);
+  const searchRef=useRef(null);
   useEffect(()=>{const t=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(t);},[]);
   // Global data refresh — runs on mount and every 5 minutes
   useEffect(()=>{
@@ -1594,6 +1620,106 @@ export default function Muster() {
     {id:"intel",    label:"INTELLIGENCE",  emoji:"🧠"},
     {id:"autotrader",label:"AUTO TRADER",  emoji:"🤖"},
   ];
+
+  const PRIMARY_NAV=[
+    {id:"home",        label:"HOME"},
+    {id:"markets",     label:"MARKETS"},
+    {id:"intelligence",label:"INTELLIGENCE"},
+    {id:"trading",     label:"TRADING"},
+    {id:"learn",       label:"LEARN"},
+  ];
+  const SUB_TABS={
+    markets:[
+      {id:"charts",    label:"Price Charts"},
+      {id:"supply",    label:"Supply & Demand"},
+      {id:"seasonal",  label:"Seasonals"},
+      {id:"cot",       label:"COT Charts"},
+      {id:"weather",   label:"Weather"},
+      {id:"currencies",label:"Currencies"},
+      {id:"australia", label:"Australia"},
+    ],
+    intelligence:[
+      {id:"intel",   label:"News Feed"},
+      {id:"analyst", label:"AI Analyst"},
+      {id:"reports", label:"Reports"},
+    ],
+    trading:[
+      {id:"scorecard", label:"Scorecard"},
+      {id:"portfolio", label:"Portfolio"},
+      {id:"autotrader",label:"Auto Trader"},
+      {id:"backtest",  label:"Backtesting"},
+      {id:"alerts",    label:"Alerts"},
+    ],
+    learn:[
+      {id:"education",label:"Education"},
+      {id:"journal",  label:"Trade Journal"},
+      {id:"equities", label:"AG Equities"},
+    ],
+  };
+  const TAB_TO_CATEGORY={
+    home:"home",
+    charts:"markets",supply:"markets",seasonal:"markets",cot:"markets",
+    weather:"markets",currencies:"markets",australia:"markets",
+    intel:"intelligence",analyst:"intelligence",reports:"intelligence",
+    scorecard:"trading",portfolio:"trading",autotrader:"trading",
+    backtest:"trading",alerts:"trading",
+    education:"learn",journal:"learn",equities:"learn",
+  };
+  function navigateToTab(id){
+    setTab(id);
+    const cat=TAB_TO_CATEGORY[id];
+    if(cat&&cat!=="home") setSubTabMemory(prev=>({...prev,[cat]:id}));
+  }
+  const activeCategory=TAB_TO_CATEGORY[tab]||"home";
+
+  const SEARCH_INDEX=useMemo(()=>[
+    // Tabs
+    ...TABS.map(t=>({tabId:t.id,label:t.label,sub:"Tab",emoji:t.emoji,keywords:t.label.toLowerCase()})),
+    // Commodities → charts tab
+    ...COMMODITIES.map(c=>({tabId:"charts",label:c.name,sub:`${c.sector} · Price Charts`,emoji:c.emoji,keywords:`${c.name} ${c.symbol} ${c.sector}`.toLowerCase()})),
+    // Commodities → scorecard tab
+    ...COMMODITIES.map(c=>({tabId:"scorecard",label:`${c.name} Scorecard`,sub:"Scorecard",emoji:c.emoji,keywords:`${c.name} ${c.symbol} scorecard signal`.toLowerCase()})),
+    // Currencies
+    ...CURRENCIES_META.map(c=>({tabId:"currencies",label:c.pair,sub:`${c.name} · Currencies`,emoji:"💱",keywords:`${c.pair} ${c.name} currency fx`.toLowerCase()})),
+    // Section headings
+    {tabId:"supply",   label:"WASDE Data",         sub:"Supply & Demand",emoji:"⚖️", keywords:"wasde supply demand stocks"},
+    {tabId:"supply",   label:"Stocks-to-Use Ratio", sub:"Supply & Demand",emoji:"⚖️", keywords:"stocks use ratio stur"},
+    {tabId:"cot",      label:"COT Positioning",     sub:"COT Charts",     emoji:"📉", keywords:"cot commitment traders positioning"},
+    {tabId:"reports",  label:"Export Inspections",  sub:"Reports",        emoji:"📋", keywords:"export inspections usda"},
+    {tabId:"weather",  label:"Crop Weather",        sub:"Weather",        emoji:"🌦️",keywords:"weather crop drought rainfall temperature"},
+    {tabId:"backtest", label:"Backtesting Engine",  sub:"Backtesting",    emoji:"🔬", keywords:"backtest strategy signals ma cross"},
+    {tabId:"seasonal", label:"Seasonal Patterns",   sub:"Seasonals",      emoji:"📈", keywords:"seasonal patterns calendar"},
+    {tabId:"education",label:"Trading Education",   sub:"Education",      emoji:"📚", keywords:"education learn beginner futures"},
+    {tabId:"journal",  label:"Trade Journal",       sub:"Journal",        emoji:"📓", keywords:"journal trade log review"},
+    {tabId:"portfolio",label:"Open Positions",      sub:"Portfolio",      emoji:"💼", keywords:"portfolio positions open trades"},
+    {tabId:"equities", label:"Ag Equities",         sub:"AG Equities",    emoji:"🏢", keywords:"equities stocks asx listed ag"},
+    {tabId:"alerts",   label:"Price Alerts",        sub:"Alerts",         emoji:"🔔", keywords:"alerts price notifications"},
+    {tabId:"australia",label:"Australian Markets",  sub:"Australia",      emoji:"🦘", keywords:"australia wheat beef wool asx aud eyci"},
+    {tabId:"intel",    label:"Intelligence Feed",   sub:"Intelligence",   emoji:"🧠", keywords:"intelligence news feed headlines"},
+    {tabId:"autotrader",label:"Auto Trader",        sub:"Auto Trader",    emoji:"🤖", keywords:"auto trader paper trading signals ai"},
+    {tabId:"analyst",  label:"AI Market Analyst",   sub:"AI Analyst",     emoji:"◆",  keywords:"ai analyst chat market question"},
+  ],[]);
+
+  const searchResults=useMemo(()=>{
+    const q=searchQuery.trim().toLowerCase();
+    if(!q) return [];
+    return SEARCH_INDEX.filter(e=>e.keywords.includes(q)||e.label.toLowerCase().includes(q)||e.sub.toLowerCase().includes(q)).slice(0,8);
+  },[searchQuery,SEARCH_INDEX]);
+
+  function handleSearchKey(e){
+    if(!searchResults.length) return;
+    if(e.key==="ArrowDown"){e.preventDefault();setSearchCursor(c=>Math.min(c+1,searchResults.length-1));}
+    else if(e.key==="ArrowUp"){e.preventDefault();setSearchCursor(c=>Math.max(c-1,0));}
+    else if(e.key==="Enter"){e.preventDefault();const r=searchResults[searchCursor>=0?searchCursor:0];if(r){navigateToTab(r.tabId);setSearchQuery("");setSearchCursor(-1);}}
+    else if(e.key==="Escape"){setSearchQuery("");setSearchCursor(-1);}
+  }
+
+  // Close search on outside click
+  useEffect(()=>{
+    function handleClick(e){if(searchRef.current&&!searchRef.current.contains(e.target)){setSearchQuery("");setSearchCursor(-1);}}
+    document.addEventListener("mousedown",handleClick);
+    return()=>document.removeEventListener("mousedown",handleClick);
+  },[]);
 
   return (
     <div style={{background:C.eggshell,minHeight:"100vh",color:C.charcoal,fontFamily:"'IBM Plex Sans',sans-serif"}}>
@@ -1636,17 +1762,75 @@ export default function Muster() {
       {/* TICKER */}
       <Ticker/>
 
-      {/* NAV */}
-      <div style={{background:C.white,borderBottom:`2px solid ${C.lightGrey}`,overflowX:"auto",position:"sticky",top:56,zIndex:99}}>
-        <div style={{display:"flex",padding:"0 24px",minWidth:"max-content"}}>
-          {TABS.map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${C.eucalyptus}`:"2px solid transparent",padding:"10px 13px",marginBottom:"-2px",color:tab===t.id?C.eucalyptus:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",cursor:"pointer",transition:"color 0.15s",fontWeight:tab===t.id?600:400,whiteSpace:"nowrap"}}
-            onMouseEnter={e=>{if(tab!==t.id)e.target.style.color=C.charcoal;}}
-            onMouseLeave={e=>{if(tab!==t.id)e.target.style.color=C.wheatDark;}}
-            >{t.emoji} {t.label}</button>
-          ))}
+      {/* PRIMARY NAV */}
+      <div style={{background:C.white,borderBottom:activeCategory==="home"?`2px solid ${C.lightGrey}`:"none",position:"sticky",top:56,zIndex:99,display:"flex",alignItems:"stretch",boxShadow:activeCategory!=="home"?"0 1px 0 0 "+C.lightGrey:"none"}}>
+        <div style={{flex:1,display:"flex",padding:"0 0 0 20px"}}>
+          {PRIMARY_NAV.map(p=>{
+            const isActive=activeCategory===p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={()=>{
+                  if(p.id==="home"){setTab("home");}
+                  else{const dest=subTabMemory[p.id]||SUB_TABS[p.id][0].id;setTab(dest);}
+                }}
+                style={{background:"none",border:"none",borderBottom:isActive?`3px solid ${C.eucalyptus}`:"3px solid transparent",padding:"0 16px",marginBottom:"-1px",height:48,color:isActive?C.eucalyptus:C.charcoal,fontSize:13,fontFamily:"'IBM Plex Sans',sans-serif",letterSpacing:"0.06em",fontWeight:isActive?700:500,cursor:"pointer",transition:"color 0.15s",whiteSpace:"nowrap"}}
+                onMouseEnter={e=>{if(!isActive){e.currentTarget.style.color=C.eucalyptus;e.currentTarget.style.borderBottomColor=C.eucalyptusPale;}}}
+                onMouseLeave={e=>{if(!isActive){e.currentTarget.style.color=C.charcoal;e.currentTarget.style.borderBottomColor="transparent";}}}
+              >{p.label}</button>
+            );
+          })}
+        </div>
+        {/* SEARCH */}
+        <div ref={searchRef} style={{position:"relative",display:"flex",alignItems:"center",padding:"0 16px",borderLeft:`1px solid ${C.lightGrey}`,flexShrink:0}}>
+          <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+            <span style={{position:"absolute",left:8,color:C.wheatDark,fontSize:12,pointerEvents:"none",fontFamily:"'DM Mono',monospace"}}>⌕</span>
+            <input
+              type="text"
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={e=>{setSearchQuery(e.target.value);setSearchCursor(-1);}}
+              onKeyDown={handleSearchKey}
+              style={{paddingLeft:24,paddingRight:8,height:26,width:160,border:`1px solid ${C.lightGrey}`,borderRadius:3,fontSize:11,fontFamily:"'IBM Plex Sans',sans-serif",color:C.charcoal,background:C.offwhite,outline:"none",transition:"border-color 0.15s"}}
+              onFocus={e=>e.target.style.borderColor=C.eucalyptus}
+              onBlur={e=>e.target.style.borderColor=C.lightGrey}
+            />
+          </div>
+          {searchResults.length>0&&(
+            <div style={{position:"absolute",top:"100%",right:0,width:280,background:C.white,border:`1px solid ${C.lightGrey}`,borderTop:"none",borderRadius:"0 0 4px 4px",boxShadow:"0 6px 16px rgba(0,0,0,0.10)",zIndex:200}}>
+              {searchResults.map((r,i)=>(
+                <div
+                  key={i}
+                  onMouseDown={()=>{navigateToTab(r.tabId);setSearchQuery("");setSearchCursor(-1);}}
+                  onMouseEnter={()=>setSearchCursor(i)}
+                  style={{padding:"8px 14px",cursor:"pointer",background:i===searchCursor?`${C.wheat}22`:C.white,borderBottom:i<searchResults.length-1?`1px solid ${C.lightGrey}`:"none",display:"flex",alignItems:"baseline",gap:8}}
+                >
+                  <span style={{fontSize:12,fontFamily:"'IBM Plex Sans',sans-serif",fontWeight:500,color:C.charcoal,flex:1}}>{r.label}</span>
+                  {r.sub&&<span style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.wheatDark,letterSpacing:"0.05em",flexShrink:0}}>{r.sub}</span>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* SECONDARY NAV */}
+      {activeCategory!=="home"&&SUB_TABS[activeCategory]&&(
+        <div style={{background:C.offwhite,borderBottom:`2px solid ${C.lightGrey}`,position:"sticky",top:104,zIndex:98,display:"flex",padding:"0 20px",overflowX:"auto"}}>
+          {SUB_TABS[activeCategory].map(s=>{
+            const isActive=tab===s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={()=>navigateToTab(s.id)}
+                style={{background:"none",border:"none",borderBottom:isActive?`2px solid ${C.wheat}`:"2px solid transparent",padding:"0 14px",marginBottom:"-2px",height:36,color:isActive?C.wheatDark:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",fontWeight:isActive?600:400,cursor:"pointer",transition:"color 0.15s",whiteSpace:"nowrap",opacity:isActive?1:0.7}}
+                onMouseEnter={e=>{if(!isActive){e.currentTarget.style.opacity="1";e.currentTarget.style.color=C.wheatDark;}}}
+                onMouseLeave={e=>{if(!isActive){e.currentTarget.style.opacity="0.7";e.currentTarget.style.color=C.charcoal;}}}
+              >{s.label}</button>
+            );
+          })}
+        </div>
+      )}
 
       {/* CONTENT */}
       <div style={{padding:"22px 24px",animation:"fadeIn 0.2s ease"}}>

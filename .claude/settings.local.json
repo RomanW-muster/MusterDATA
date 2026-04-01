@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npx vite:*)",
-      "Bash(pkill -f \"vite\")"
+      "Bash(pkill -f \"vite\")",
+      "Bash(curl -s \"https://corsproxy.io/?https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSAL\")",
+      "Bash(curl -sI \"https://corsproxy.io/?https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSAL\")",
+      "Bash(curl -sI \"https://open.er-api.com/v6/latest/USD\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
