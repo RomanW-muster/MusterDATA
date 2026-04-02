@@ -311,36 +311,176 @@ const AG_EQUITIES = [
 ];
 
 const EDU_MODULES = [
-  {id:"basics",   title:"Commodity Futures — The Basics",      emoji:"📚",level:"Beginner",     duration:"15 min",
-   sections:[
-    {heading:"What is a futures contract?",content:"A futures contract is a legally binding agreement to buy or sell a commodity at a predetermined price on a specific future date. When you buy a corn futures contract, you're agreeing to take delivery of 5,000 bushels of corn at the contract price on the delivery date — though most traders close positions before delivery ever happens.\n\nFutures trade on exchanges (CME Group for most Ag commodities) and are standardised — each contract has a fixed size, quality specification, and delivery location. This standardisation is what makes them liquid and tradeable."},
-    {heading:"Long vs Short",content:"Going LONG means you buy a contract — you profit if prices rise. Going SHORT means you sell a contract you don't own — you profit if prices fall. Both are equally valid strategies. Farmers typically go short to lock in prices for their crop before harvest (hedging). Speculators go long or short based on their market view."},
-    {heading:"Margin and leverage",content:"Futures require only a small margin deposit (typically 3–8% of contract value) to control the full contract. This creates leverage — a $500 margin deposit might control $15,000 worth of corn. Leverage amplifies both gains and losses. This is why position sizing and risk management are critical before entering any futures trade."},
-   ]},
-  {id:"supplydem",title:"Reading Supply & Demand",               emoji:"⚖️",level:"Beginner",     duration:"12 min",
-   sections:[
-    {heading:"The stocks-to-use ratio — the most important number",content:"The stocks-to-use (S/U) ratio is ending stocks divided by total use, expressed as a percentage. It tells you how many months of supply exist at the end of the marketing year. A low S/U ratio means tight stocks — the market has little buffer against a supply disruption, so prices tend to be high and volatile.\n\nHistorically, corn below 10% S/U is very tight and bullish. Above 15% is comfortable. The current 13.4% is drawing down — a bullish signal."},
-    {heading:"How to read the WASDE",content:"The WASDE is released monthly (usually the second Tuesday). Focus on: (1) Global ending stocks. (2) US production estimate. (3) Export projections. (4) The 'changes from last month' column — markets have already priced the absolute level, it's the changes that matter.\n\nThe WASDE is the single most important scheduled data release in grain markets. Always know when it's coming."},
-    {heading:"Supply vs demand shocks",content:"Supply shocks (drought, flood, frost) are typically fast-moving and violent — markets reprice quickly when crop estimates change. Demand shocks (China buying, trade policy) can be more gradual but sustained. The best trades often come when both supply AND demand signals align — what traders call 'confluence'."},
-   ]},
-  {id:"weather",  title:"Weather & Crop Development",            emoji:"🌦️",level:"Intermediate", duration:"18 min",
-   sections:[
-    {heading:"Why weather is the ultimate wildcard",content:"Unlike supply/demand data which updates monthly, weather changes daily — and a single week of stress at a critical crop development stage can cut yields by 20-30%. This is why the most violent price moves in grain markets happen during the summer weather market (June–August for US crops)."},
-    {heading:"Critical growing periods by commodity",content:"CORN: Planting (Apr–May) — slow planting = bullish. Pollination (mid-Jul) — heat or drought at this stage destroys yield potential. This is the highest-risk weather window in all commodity markets.\n\nWHEAT: Winter wheat green-up (Mar–Apr). Grain fill (May–Jun) — hot and dry cuts protein and yield. Harvest (Jun–Jul) — rain at harvest lowers quality.\n\nSOYBEANS: Planting (May–Jun). Pod fill (Aug). Brazilian second crop (Feb–Mar) now equally critical.\n\nLIVE CATTLE: Weather affects feed costs (drought = higher corn/hay = higher feeding costs) and summer pasture conditions."},
-    {heading:"El Niño and La Niña",content:"LA NIÑA typically means: drier than normal in Brazil and Argentina (bullish soy/corn), drier in the US Southern Plains (bullish wheat), wetter in northern Australia.\n\nEL NIÑO typically means: wetter in South America (bearish — large crops), drier in Southeast Asia, variable in the US.\n\nThe current La Niña watch (60% probability by Jun–Aug) is a meaningful development to track closely."},
-   ]},
-  {id:"cot",      title:"Understanding the COT Report",          emoji:"📊",level:"Intermediate", duration:"10 min",
-   sections:[
-    {heading:"What is the COT and why does it matter?",content:"The Commitments of Traders (COT) report is published every Friday by the CFTC. It shows aggregate net positions held by different categories of traders as of the previous Tuesday. For commodity traders, it's the most important sentiment and positioning tool available."},
-    {heading:"The three trader categories",content:"COMMERCIALS (hedgers): Farmers, grain companies, processors who hedge real physical exposure. They're the 'smart money' in terms of understanding physical fundamentals.\n\nMANAGED MONEY (funds): Hedge funds, CTAs who trade for profit. They trend-follow and hold large positions. When they're extremely long or short, it often precedes a reversal.\n\nNON-COMMERCIAL / SPECS: Smaller speculators — generally less informative."},
-    {heading:"How to use COT as a beginner",content:"Watch for EXTREME net short positioning by managed money. When funds are at or near record net short, there's not much selling left — but a lot of buying that has to happen when they cover. This creates asymmetric upside risk.\n\nConversely, record net long positioning means funds are crowded into a bull trade — vulnerable to any negative news. The COT is a contrarian tool, not a momentum tool."},
-   ]},
-  {id:"trading101",title:"How to Actually Start Trading",        emoji:"🚀",level:"Beginner",     duration:"20 min",
-   sections:[
-    {heading:"Paper trading first — always",content:"Before putting real money on the line, spend at least 3 months paper trading. Log every trade in your journal: your thesis, entry, target, stop loss, and result. The goal isn't just to make money on paper — it's to build and test your analytical process."},
-    {heading:"Brokers for commodity futures in Australia",content:"As an Australian retail trader, your main options:\n\n• Interactive Brokers — best for Australians accessing CME futures directly. Low commissions, excellent platform.\n• Saxo Bank — good for commodity CFDs if you want futures exposure without full contract sizes.\n• CMC Markets — commodity CFDs with competitive spreads.\n\nNote: Full CME corn futures = 5,000 bushels ≈ $24,000 notional. Mini futures (1/5 size) are available."},
-    {heading:"Risk management — the one thing that keeps you in the game",content:"Never risk more than 1–2% of your trading capital on a single trade. If you have $10,000, your maximum loss per trade is $100–$200. Always set a stop loss BEFORE entering a trade. Know your exit before your entry.\n\nPre-trade checklist: (1) WASDE/S/U ratio (2) Weather conditions (3) COT positioning (4) Seasonal tendency (5) Your thesis in one sentence (6) Where am I wrong? — define your stop."},
-   ]},
+  {
+    id:"foundation", title:"Foundation", subtitle:"Weeks 1–2", emoji:"🏗️",
+    level:"Beginner", color:"#2F4F3E",
+    quiz:{ label:"CONTRACT QUIZ", unlocks:"Supply & Demand",
+      questions:[
+        { q:"A standard CME corn futures contract represents how many bushels?", opts:["1,000","5,000","10,000","50,000"], answer:1 },
+        { q:"When you 'go short' on a futures contract, you profit when prices…", opts:["Rise","Fall","Stay flat","Become more volatile"], answer:1 },
+        { q:"Basis is best defined as…", opts:["The exchange margin rate","The difference between cash price and futures price","The interest rate on margin","Tick size × contract size"], answer:1 },
+      ]
+    },
+    sections:[
+      { heading:"What are commodity futures?",
+        content:"A futures contract is a legally binding agreement to buy or sell a standardised quantity of a commodity at a predetermined price on a specific future date. When you buy one CME corn contract, you're agreeing to take delivery of exactly 5,000 bushels of #2 Yellow Corn at a specified location — though in practice, more than 97% of futures contracts are closed before physical delivery occurs.\n\nFutures exist because they solve a real problem: farmers need to lock in a selling price before harvest, and grain processors need to lock in a purchase price for future production. The futures market brings these hedgers together with speculators who provide liquidity in exchange for the opportunity to profit from price moves." },
+      { heading:"How exchanges work — CME, ICE, ASX",
+        content:"Most agricultural futures trade on CME Group (Chicago), which operates the Chicago Board of Trade (CBOT) for grains, and the Chicago Mercantile Exchange for livestock. ICE (Intercontinental Exchange) handles soft commodities — sugar, coffee, cotton, and cocoa. In Australia, ASX operates a small futures market but Australian traders primarily access CME products.\n\nAll exchange-traded futures are cleared through a central clearinghouse, which guarantees both sides of every trade. This eliminates counterparty risk — you never need to worry about the other side of your trade defaulting. The clearinghouse marks positions to market daily and collects margin to cover losses." },
+      { heading:"Long vs short, margin, leverage",
+        content:"Going LONG means buying a futures contract — you profit if prices rise above your entry. Going SHORT means selling a futures contract you don't own — you profit if prices fall below your entry. Both are equally valid strategies used every day by thousands of traders.\n\nFutures require only a small initial margin deposit — typically 3–8% of full contract value — to control the entire contract. This creates leverage. A $1,500 margin deposit might control $24,000 worth of corn. The critical thing to understand: leverage amplifies both gains and losses proportionally. A 5% move in your favour produces a 60–100% return on margin. A 5% move against you can produce an equally large loss. This is why risk management — covered in Week 10 — is not optional." },
+      { heading:"Reading a futures quote",
+        content:"A futures quote has four key components: the symbol, the contract month code, the price, and the change. ZCN25 means: ZC (Corn), N (July contract month — January=F, March=H, May=K, July=N, September=U, December=Z), 25 (year 2025).\n\nPrices are quoted in the contract's native units. Corn is cents per bushel — so a price of 478.25 means $4.7825 per bushel. Multiply by 5,000 bushels = $23,912.50 total contract value. Tick size is 1/4 cent = $12.50 per tick. Knowing your tick value is essential before trading — it tells you exactly how much you make or lose per minimum price move." },
+      { heading:"What is basis?",
+        content:"Basis is the difference between the local cash price and the nearest futures price: Basis = Cash Price − Futures Price. For an Australian wheat grower, the cash price is what their local bulk handler pays. The futures price is the CME or ASX reference price. Basis captures freight, handling, quality differences, and local supply/demand conditions.\n\nBasis matters because it affects the true value of a hedge. If you short futures to hedge grain in storage and the basis widens (cash weakens relative to futures), your hedge makes less money than expected. Understanding your local basis history — seasonally, it tends to firm up as stocks are consumed — is a key skill for Australian Ag traders." },
+    ]
+  },
+  {
+    id:"supplydem", title:"Supply & Demand", subtitle:"Weeks 3–4", emoji:"⚖️",
+    level:"Beginner", color:"#1E2F3F",
+    quiz:{ label:"WASDE SIMULATION", unlocks:"Weather & Crops",
+      questions:[
+        { q:"The WASDE report is published approximately how often?", opts:["Daily","Weekly","Monthly","Quarterly"], answer:2 },
+        { q:"A US corn stocks-to-use ratio below 10% is typically considered…", opts:["Bearish — too much supply","Bullish — very tight stocks","Neutral","Irrelevant to prices"], answer:1 },
+        { q:"In the WASDE, what matters most for price movement?", opts:["The absolute level of global stocks","Changes vs. the prior month's estimate","The US production figure only","The cover page headline"], answer:1 },
+      ]
+    },
+    sections:[
+      { heading:"The WASDE report — what it is and why it moves markets",
+        content:"The World Agricultural Supply and Demand Estimates (WASDE) is published by the USDA on approximately the 11th of each month. It is the single most important scheduled data release in global agricultural markets. The report provides monthly estimates of US and world supply and demand for grains, oilseeds, and cotton.\n\nThe WASDE can move corn prices 10–20 cents per bushel in seconds. Markets don't move on the absolute numbers — they move on the surprise relative to pre-report trade expectations. Always find the 'average trade estimate' (published by Bloomberg, Reuters, or Dow Jones) before the report and compare it to the actual number. The difference is the market-moving information." },
+      { heading:"Stocks-to-use ratio — the most important number",
+        content:"Ending stocks divided by total annual use equals the stocks-to-use (S/U) ratio, expressed as a percentage. It answers: how many months of supply remain at the end of the marketing year? Low S/U = tight supply = high prices. High S/U = ample supply = lower prices.\n\nHistorical benchmarks for US corn: above 15% = comfortable (bearish pressure), 10–15% = snug (supportive), below 10% = very tight (strongly bullish). When S/U is below 10%, a single bad crop year can cause a supply crisis — and the market knows it. That's why tight S/U ratios create volatile, explosive markets. The current global wheat S/U is at a 7-year low. This context informs every trade in the wheat market." },
+      { heading:"How to read a supply/demand balance sheet",
+        content:"The WASDE balance sheet has three sections: Supply (beginning stocks + production + imports), Use (feed, food, exports, other), and the balancing item — Ending Stocks. The equation is always: Supply − Use = Ending Stocks.\n\nWork through it top to bottom. If production is revised down 100 million bushels and use stays the same, ending stocks drop 100 million bushels. If ending stocks are already tight, a 100 million bushel cut is a much bigger deal than if stocks are large. Context — the level — matters as much as the change. Always read the 'changes from last month' column first." },
+      { heading:"Global supply chains — who grows what, who buys what",
+        content:"CORN: US is the world's largest producer and exporter (30–35% of global trade). Brazil is #2, increasingly challenging US export dominance. China is the world's second largest producer but now a major importer. Japan, South Korea, Mexico, and Egypt are key importers.\n\nWHEAT: Russia and EU are the largest exporters. Black Sea supply (Russia, Ukraine, Romania) now dominates global trade. Australia exports 70–80% of its wheat crop, making it a key price-setter for the Asia-Pacific market. Egypt is the world's largest importer.\n\nSOYBEANS: Brazil and US together account for 80%+ of world exports. China imports 60%+ of world traded soybeans — making China's import pace the single most important demand variable to track weekly." },
+      { heading:"Export inspections and sales — reading real-time demand",
+        content:"The USDA publishes two weekly demand reports that don't require waiting for the WASDE. Export Inspections (Monday) show actual grain loaded onto ships this week. Export Sales (Thursday) show new sales contracts signed with foreign buyers. Both are published for free on the USDA FAS website.\n\nTo interpret them: compare to the 'needed weekly pace' — take the remaining export target from the WASDE, divide by remaining weeks in the marketing year. If weekly sales are running above the needed pace, it's bullish. If running below, bearish. These weekly numbers are how you track real-time demand between WASDE reports." },
+    ]
+  },
+  {
+    id:"weather", title:"Weather & Crops", subtitle:"Weeks 5–6", emoji:"🌦️",
+    level:"Intermediate", color:"#c8860a",
+    quiz:{ label:"WEATHER MARKET SIMULATION", unlocks:"Technical Analysis",
+      questions:[
+        { q:"The most critical weather window for US corn yield is…", opts:["Planting in April–May","Pollination in mid-July","Harvest in October","Winter dormancy in January"], answer:1 },
+        { q:"La Niña typically produces what conditions in Brazil and Argentina?", opts:["Wetter than normal — bearish for prices","Drier than normal — bullish for prices","No impact on Southern Hemisphere crops","Cooler US summers"], answer:1 },
+        { q:"A USDA Crop Progress report showing 40% of corn rated 'poor/very poor' would typically be interpreted as…", opts:["Bearish — too much rain is also bad","Neutral — within normal range","Bullish — supply risk elevated","Irrelevant if WASDE is unchanged"], answer:2 },
+      ]
+    },
+    sections:[
+      { heading:"Crop development stages and critical windows",
+        content:"Every crop has critical growth stages where weather stress causes disproportionate yield loss. Understanding these windows is essential for interpreting weather market moves — and for knowing when to pay attention.\n\nCORN: Planting (Apr–May) — slow planting delays development, compressing the growing season. Silking and pollination (mid-July) — heat above 35°C or drought during this 5-day window per plant destroys pollen viability. Yield loss can be 30–50% from a single heat event. This is the highest-stakes weather window in all commodity markets.\n\nWHEAT: Dormancy break and green-up (Mar–Apr) — late freeze can kill tillers. Grain fill (May–Jun) — heat and drought reduce protein and test weight. SOYBEANS: Pod set (late July–Aug) — drought stress reduces pod count directly. Brazilian second crop planting (Jan–Feb) is now equally critical to track." },
+      { heading:"El Niño, La Niña and what they mean for prices",
+        content:"These ENSO (El Niño-Southern Oscillation) phases set the broad seasonal weather backdrop for global agriculture. They don't determine every weather event — but they tilt the probability distribution for conditions across key growing regions.\n\nLA NIÑA: Drier and warmer in Brazil and Argentina (bullish soy/corn — reduced South American crop). Drier in the US Southern Plains (bullish wheat — Plains drought risk). Wetter in eastern Australia (Australian crop risk low, but export logistics can be disrupted). Typically net bullish for grains. EL NIÑO: Wetter in South America (bearish — large Brazilian and Argentine crops). Drier in Southeast Asia (bullish palm oil / sugar). Variable in the US.\n\nThe key is the transition — markets often over-react to ENSO forecasts before the actual crop impact is known. Use it as context, not as a trading signal on its own." },
+      { heading:"The US Drought Monitor — how to read it",
+        content:"Published every Thursday by the USDA/NOAA, the US Drought Monitor maps drought severity across the US in five categories: D0 (Abnormally Dry), D1 (Moderate), D2 (Severe), D3 (Extreme), D4 (Exceptional). For traders, the key is the percentage of major crop states in D2+ drought.\n\nIn historical data, years where 30%+ of the corn belt was in D2+ drought by July produced rallies of 40–150% in corn prices (2012, 2022). Track the weekly change in drought coverage in Kansas, Oklahoma and Texas for wheat, and in Iowa, Illinois, Indiana and Ohio for corn. A 5% weekly expansion into key states is often the 'spark' that triggers technical buying." },
+      { heading:"Brazil and Argentina — why they matter so much",
+        content:"Brazil and Argentina together produce more soybeans than the US — a structural shift that occurred over the past 20 years. Brazil now harvests two corn crops per year (the 'safrinha' second crop is 65–70% of total production). For global grain and oilseed traders, the South American growing season (October–March) is nearly as important as the US season.\n\nKey dates: Brazilian soybean planting begins October. First crop harvest January–February. Safrinha corn planting February–March (weather here is critical). Argentina planting November–December, harvest March–April. USDA attaché crop estimates (published by FAS) are the best early-season guides before official CONAB/Argentine government data is released.\n\nThe Brazilian Real (BRL) exchange rate also affects prices — a weak BRL incentivises Brazilian farmers to sell more aggressively, increasing global supply pressure." },
+      { heading:"Australian seasons and export logistics",
+        content:"Australia's winter crop (wheat, barley, canola) is planted April–June and harvested October–December. The northern winter crop (Queensland/northern NSW) is harvested 4–6 weeks before the southern crop, providing early price guidance. Summer crops (sorghum, cotton) are planted October–November.\n\nAustralia exports approximately 70% of its wheat crop, making port logistics and vessel availability critical to export basis. AEGIC (Australian Export Grains Innovation Centre) and ABARES publish crop estimates throughout the season. The November ABARES Crop Report and the December USDA WASDE (which incorporates Australia) are the key scheduled reports for Australian crop traders.\n\nA key local concept: 'pool price' — Australian growers selling through CBH, GrainCorp or Viterra pools receive a weighted average price across the shipping stem, smoothing out day-to-day volatility. Understanding whether the pool is hedged or unhedged matters for basis interpretation." },
+    ]
+  },
+  {
+    id:"technical", title:"Technical Analysis", subtitle:"Weeks 7–8", emoji:"📈",
+    level:"Intermediate", color:"#2a4a63",
+    quiz:{ label:"CHARTING QUIZ", unlocks:"Market Participants",
+      questions:[
+        { q:"A bullish (green) candlestick means…", opts:["Price touched a new high for the day","The close price was above the open price","Volume was above the 20-day average","Price broke a resistance level"], answer:1 },
+        { q:"ATR (Average True Range) primarily measures…", opts:["The direction of the trend","Changes in trading volume","Market volatility / price movement size","Support and resistance levels"], answer:2 },
+        { q:"When the 10-day moving average crosses above the 20-day moving average, this is known as…", opts:["A death cross","A golden cross","A resistance break","A volume divergence"], answer:1 },
+      ]
+    },
+    sections:[
+      { heading:"Reading a candlestick chart",
+        content:"Each candlestick represents one time period (day, week, etc). The 'body' of the candle shows the range between the open and close prices. A green (bullish) candle means the close was above the open — buyers won the session. A red (bearish) candle means the close was below the open. The 'wicks' (thin lines above and below the body) show the highest and lowest prices reached during the session.\n\nA long upper wick on a green candle shows that prices rallied significantly but then gave back gains — a sign of selling pressure at higher levels. A long lower wick shows that prices fell sharply but buyers stepped in — a sign of support. Learning to read candle formations (doji, hammer, engulfing) gives you a quick visual read of market sentiment without needing to know the exact numbers." },
+      { heading:"Moving averages — MA10, MA20, MA50",
+        content:"A moving average smooths price data by averaging the last N closing prices. The 10-day MA (MA10) responds quickly to price changes — it's useful for short-term momentum. The 20-day MA is medium-term. The 50-day MA shows the major trend direction.\n\nCrossover signals: when the faster MA crosses above the slower MA, it signals building upward momentum (bullish). When it crosses below, bearish momentum is building. These signals lag — they confirm a trend that's already underway, so they work better in trending markets than in choppy, sideways conditions. In the Price Charts tab of Muster, you can see MA10/20 crossover signals marked directly on the chart." },
+      { heading:"Support and resistance levels",
+        content:"Support is a price level where buying has historically been strong enough to stop prices falling further. Resistance is a level where selling has been strong enough to cap rallies. These levels work because market participants remember them and act on them — creating a self-fulfilling element.\n\nFor commodity futures, key support and resistance often clusters around: previous contract highs/lows, round numbers (500 for corn, 600 for wheat), WASDE-driven gaps (a report causes a big gap — the gap itself becomes support/resistance), and the 50-day and 200-day moving averages. When price breaks through a resistance level on high volume, that level often becomes new support." },
+      { heading:"Volume and open interest",
+        content:"Volume is the number of contracts traded in a session. Open interest is the total number of outstanding contracts that haven't been settled. These two indicators tell you about the conviction behind a price move.\n\nHigh volume on a price rally = genuine buying interest, more convincing move. Low volume on a price rally = potentially a 'fake out' that could reverse. Rising open interest as prices rise = new longs are entering the market — confirms the trend. Falling open interest as prices rise = short covering, not new buying — trend may be running out of fuel. Watch for 'volume climax' events — unusually high volume after a big move often signals exhaustion." },
+      { heading:"ATR — Average True Range, what it tells you",
+        content:"ATR measures market volatility by averaging the true range over 14 periods. True range is the largest of: (high − low), (high − previous close), (previous close − low). It captures gaps and overnight moves as well as intraday range.\n\nATR is essential for position sizing and stop placement. If corn has a 14-day ATR of 12 cents, placing a stop-loss 12 cents away means you'll absorb normal daily noise without being stopped out prematurely. Placing it at 6 cents means random daily volatility will stop you out before your thesis plays out. The Muster Auto Trader uses 2×ATR for stop placement — absorbing 2 days of normal volatility while still defining a clear maximum loss." },
+    ]
+  },
+  {
+    id:"participants", title:"Market Participants", subtitle:"Week 9", emoji:"👥",
+    level:"Intermediate", color:"#8B1A1A",
+    quiz:{ label:"COT EXTREME SIMULATOR", unlocks:"Trading Mechanics",
+      questions:[
+        { q:"When managed money (funds) are at a record net SHORT, traders typically see this as…", opts:["A strong sell signal — follow the funds","A potential bullish contrarian signal — not much selling left","A sign of underlying fundamental weakness","No meaningful market information"], answer:1 },
+        { q:"Commercial traders in the COT report are primarily…", opts:["Hedge funds and CTAs pursuing profit","Individual retail speculators","Farmers, processors and physical commodity firms hedging real exposure","Central banks and sovereign wealth funds"], answer:2 },
+        { q:"The COT report is published by…", opts:["CME Group","USDA","CFTC (Commodity Futures Trading Commission)","The Federal Reserve"], answer:2 },
+      ]
+    },
+    sections:[
+      { heading:"Who trades commodities and why",
+        content:"Agricultural futures markets serve two fundamentally different types of participants, and understanding their motivations changes how you interpret price action.\n\nHEDGERS come to the futures market to reduce risk on physical commodity exposure they already have. A wheat farmer sells futures to lock in a price for the crop still growing in the ground. A flour miller buys futures to lock in the cost of their future wheat purchases. A feedlot operator buys corn futures to hedge feed costs. For hedgers, futures are insurance — they are willing to forgo upside in exchange for price certainty.\n\nSPECULATORS provide the liquidity that makes hedging possible. They have no physical commodity exposure — they're pure price traders. Without speculators, there might not be a buyer willing to take the other side of a farmer's hedge at a fair price. Speculation, despite its bad reputation, is essential to a functioning agricultural futures market." },
+      { heading:"The COT report — reading fund positioning",
+        content:"The Commitments of Traders report is published every Friday by the CFTC (Commodity Futures Trading Commission) and covers positions as of the prior Tuesday. It breaks down open interest into categories: Commercials (hedgers), Non-Commercials (large speculators), and Non-Reportables (small speculators).\n\nFor commodity traders, the most useful number is Managed Money Net Position — the difference between long and short contracts held by hedge funds and CTAs. This tells you whether the 'hot money' is positioned for higher or lower prices. Track it weekly and compare to its 52-week range. At extremes — especially extreme net short — the market is vulnerable to a violent short-covering rally when any positive news arrives. Muster's COT Charts tab shows this data for all major agricultural futures." },
+      { heading:"Hedgers vs speculators — the positioning dynamic",
+        content:"The textbook says commercials are the 'smart money' (they know the physical market best) and speculators are dumb trend-followers who drive prices away from fair value. Reality is more nuanced.\n\nCommercials are smart about physical fundamentals but they're also hedging risk, not trying to predict prices. When a Brazilian soy exporter sells futures, they're not making a bearish call — they're locking in a margin on grain they've already contracted to sell. So commercial selling doesn't necessarily mean prices will fall.\n\nManaged money (funds) do tend to trend-follow — they pile into winning trades and out of losing ones. This creates momentum and overshoots. At extremes, when funds are all on one side of the market, the setup for a reversal is created. The best COT signals come when commercial hedgers and fund positions are diverging sharply." },
+      { heading:"How commercial firms hedge — ADM, Cargill, Bunge",
+        content:"The Big Four grain traders — ADM, Cargill, Bunge, and Louis Dreyfus — collectively handle 70–80% of global grain trade. Understanding how they operate gives you an edge in interpreting the physical market.\n\nWhen a grain company buys physical grain from a farmer, they simultaneously sell an equivalent number of futures contracts to lock in the margin between the cash purchase price and the futures price. This is called 'buying the basis'. They will lift this hedge when they've found an end buyer. The timing of when commercial firms lift hedges — particularly around key seasonal or export demand windows — creates predictable price patterns that show up in open interest data.\n\nFor Australian traders: CBH Group (WA cooperative), GrainCorp, and Viterra operate similarly in the Australian grain market, continuously hedging their accumulation positions in CME and ASX futures." },
+    ]
+  },
+  {
+    id:"mechanics", title:"Trading Mechanics", subtitle:"Weeks 10–11", emoji:"⚙️",
+    level:"Intermediate", color:"#2F4F3E",
+    quiz:{ label:"PAPER TRADE CHALLENGE", unlocks:"Ag Finance & Equities",
+      questions:[
+        { q:"Muster's Auto Trader uses what fraction of the Kelly Criterion for position sizing?", opts:["Full Kelly","Half Kelly","Quarter Kelly","Double Kelly for high-confidence trades"], answer:1 },
+        { q:"A stop-loss placed 2×ATR below your entry price is designed to…", opts:["Maximise profit on winning trades","Define maximum loss if the trade thesis is wrong","Guarantee a breakeven exit","Trigger automatically on any 1% market move"], answer:1 },
+        { q:"Position sizing refers to…", opts:["The length of time you hold a trade","Deciding how many contracts to trade based on your risk parameters","Choosing which commodity to trade","How you read a futures price quote"], answer:1 },
+      ]
+    },
+    sections:[
+      { heading:"How to place a futures order",
+        content:"The main order types for futures trading: MARKET ORDER — executes immediately at the best available price. Use only in liquid markets during trading hours. LIMIT ORDER — executes at your specified price or better. Preferred for entry — you control your entry price but risk not getting filled if price moves away. STOP ORDER — triggers when price reaches your level, then executes as a market order. Used for stop-losses and breakout entries. STOP-LIMIT — triggers at your stop price but only fills at the limit price or better. Risk of not filling in fast markets.\n\nFor Australian traders using Interactive Brokers: the CME's main grain trading hours are 8:30am–1:20pm CT (Chicago). Pre-market trading starts at 7pm CT the prior evening. Most volume occurs during the day session. Avoid placing market orders in the first and last 5 minutes when spreads widen." },
+      { heading:"Stop losses and take profits — non-negotiable",
+        content:"A stop loss is an order to automatically close your position if price reaches a specified level against you. It is the most important risk management tool available to a futures trader. Without a stop loss, a single bad trade can wipe out months of gains.\n\nRule: always define your stop loss BEFORE entering a trade. Never move a stop loss further away after it's been set (this is 'stop widening' — one of the most common and costly trading mistakes). Only move stops to reduce risk (closer to entry) or to protect profits (trailing stop). Take profit targets: use the R multiple system. If your stop is 12 cents away (1R of risk), set a target at 2R (24 cents) or 3R (36 cents) minimum. This means you can be right less than half the time and still be profitable." },
+      { heading:"Position sizing and risk management",
+        content:"Risk management starts before the trade. The standard rule: never risk more than 1–2% of total capital on a single trade. On a $10,000 account, that's $100–$200 maximum loss per trade.\n\nCalculation: (1) Determine your stop distance in price terms. (2) Convert to dollar risk per contract using tick value. If corn stop is 12 cents away and each cent = $50 (5,000 bushels), risk per contract = $600. (3) Divide your max dollar risk by risk per contract: $200 ÷ $600 = 0.33 contracts. One mini contract (1/5 size) = $120 risk. Full contract = $600 — exceeds your limit at 1% risk. Position sizing forces discipline. It also naturally means you trade smaller when volatility is high (ATR is large) and larger when conditions are quiet — which is exactly the right behaviour." },
+      { heading:"The Kelly Criterion explained",
+        content:"The Kelly Criterion is a mathematical formula for optimal position sizing: K = Win Rate − (Loss Rate / Reward-to-Risk Ratio). If you win 55% of trades with a 2:1 reward-to-risk, Kelly says bet 32.5% of capital on each trade.\n\nIn practice, full Kelly is too aggressive — a losing streak can devastate your account. Most professional traders use Half Kelly (K/2), which cuts the sizing in half and significantly reduces drawdown risk while keeping most of the long-run growth advantage. Muster's Auto Trader uses half Kelly sizing, further capped at 3 contracts maximum and 8% of equity as maximum margin per position. Kelly only works correctly if your win rate and reward-to-risk estimates are accurate — which is why the trade journal and attribution tracking matter so much." },
+      { heading:"Building a pre-trade checklist",
+        content:"A pre-trade checklist is the difference between disciplined trading and gambling. Before entering any futures position, work through this six-point framework:\n\n1. WASDE/FUNDAMENTALS: What is the current stocks-to-use ratio? Which direction is it trending? Is there a WASDE in the next 14 days?\n\n2. WEATHER: What are the current crop conditions? Any developing weather stress in key regions? What is the ENSO phase?\n\n3. COT POSITIONING: Is managed money net position at an extreme? Is the positioning consistent with my trade direction?\n\n4. SEASONAL TENDENCY: What does the historical pattern say for this time of year in this market?\n\n5. ENTRY THESIS: Write one sentence explaining exactly why prices should move in your direction.\n\n6. INVALIDATION: At what price level is my thesis wrong? That is your stop loss." },
+    ]
+  },
+  {
+    id:"agfinance", title:"Ag Finance & Equities", subtitle:"Week 12", emoji:"🏢",
+    level:"Advanced", color:"#9a7d45",
+    quiz:null,
+    sections:[
+      { heading:"Ag company analysis — ADM, Bunge, Nutrien, Deere",
+        content:"The agricultural supply chain involves several categories of listed companies, each with different drivers: GRAIN MERCHANTS (ADM, Bunge, Viterra): revenues driven by processing volumes and basis margins, not commodity price direction. They often benefit from volatility. FERTILISER COMPANIES (Nutrien, Mosaic, CF Industries): driven by nutrient price cycles, natural gas costs (nitrogen), and global grain prices (higher grain prices → more farming → higher fertiliser demand). EQUIPMENT (Deere & Co): driven by farm income, which is tied to commodity prices with a 1–2 year lag. SEED & CHEMISTRY (Corteva, FMC): more defensive, driven by planted area and R&D pipeline.\n\nFor Australian investors: Elders, GrainCorp, and Nufarm offer exposure to Australian Ag fundamentals. ASX-listed Ag REITs like Rural Funds Group provide farmland exposure." },
+      { heading:"Crush margins and how they work",
+        content:"The soybean crush margin (also called the 'gross processing margin' or GPM) is the profit a soybean crusher earns by buying soybeans and selling soybean meal and soybean oil. Crush margin = (Meal value × 44 lbs/bu × 0.022 + Oil value × 11 lbs/bu) − Soybean cost.\n\nWhen crush margins are wide, processors run at maximum capacity — bullish for soybeans, bearish for meal and oil. When margins are thin or negative, crushers cut back — bearish for soybeans. The same logic applies to corn ethanol margins (the 'ethanol crush'): ethanol price minus corn cost minus energy costs. Both margins are real-time indicators of physical demand for the underlying commodity." },
+      { heading:"Input cost relationships — fertiliser, fuel, seed",
+        content:"Farm profitability is the difference between commodity prices and input costs. When input costs rise faster than commodity prices, farm income falls — leading to reduced planted area in subsequent seasons (a negative feedback loop that eventually raises prices as supply contracts).\n\nKey relationships: Urea (nitrogen fertiliser) price tracks natural gas — up to 70% of production cost is natural gas. DAP (diammonium phosphate) tracks phosphate rock and sulphur. Diesel/fuel is 15–20% of total farm variable costs. Seed costs have risen sharply as GM traits became dominant — this creates a higher 'cost of carry' break-even price for farmers, which supports commodity prices at the margin.\n\nThe ABARES Australian crop report includes detailed input cost analysis — essential reading for anyone trading Australian-linked commodities." },
+      { heading:"Farm income and land values",
+        content:"Agricultural land values are essentially a capitalised stream of future farm income. When commodity prices are high, farm incomes rise, land values follow. This creates both opportunity and risk: high commodity prices attract capital into farming, leading to more planted area, which eventually rebuilds supply and suppresses prices.\n\nIn Australia: the Australian Farmland Index (produced by MSCI and Rural Funds Group) tracks farmland price appreciation. Since 2016, Australian farmland has returned approximately 12–15% per year including income — outperforming most other real asset classes. Key drivers: water availability, soil quality, infrastructure access, and proximity to export terminals.\n\nFor futures traders: farm income and land prices are lagging indicators. They confirm trends rather than predict them. But extreme farmland value runups historically precede periods of commodity price moderation as new supply responds." },
+      { heading:"How to read an Ag earnings report",
+        content:"Agricultural company earnings reports require different analysis from tech or consumer stocks. Key metrics by sector:\n\nGRAIN MERCHANTS: Focus on 'Agricultural Services and Oilseeds' processing volumes, not just revenue. Revenue is misleading because it moves with commodity prices. Look for Ag Processing margins (gross profit per tonne), storage and handling fees, and management commentary on forward-booked volumes.\n\nFERTILISER: Nitrogen, phosphate, and potash segment margins separately. Watch for management guidance on natural gas cost hedging. Forward order book size is a leading indicator.\n\nEQUIPMENT (Deere): Equipment order backlog is the key metric — multi-year backlogs have historically predicted revenue 18–24 months ahead. Watch for comments on precision agriculture adoption rates and financing delinquencies (a warning sign for farm sector stress)." },
+    ]
+  },
+  {
+    id:"advanced", title:"Advanced Concepts", subtitle:"Weeks 13+", emoji:"🚀",
+    level:"Advanced", color:"#2F4F3E",
+    quiz:null,
+    sections:[
+      { heading:"Spread trading — calendar and inter-commodity spreads",
+        content:"Spread trading involves simultaneously buying one futures contract and selling another related contract. Calendar spreads (same commodity, different delivery months) capture changes in the 'carry' — the cost of storing a commodity. When nearby futures trade at a premium to deferred contracts ('backwardation'), it signals tight prompt supplies. When deferred trades at a premium ('contango'), storage is cheap and supplies are plentiful.\n\nInter-commodity spreads: the corn/wheat spread (long one, short the other) captures relative supply/demand changes between the two crops. The soy complex spread — long soybeans vs. short meal+oil — is the inverse crush trade. Spreads often have lower margin requirements than outright positions and can be less volatile. They're frequently the domain of more sophisticated commodity traders." },
+      { heading:"Options on futures — basics",
+        content:"Options give the buyer the right (but not the obligation) to buy (call) or sell (put) a futures contract at a specific price (strike) before expiration. The seller of an option collects a premium in exchange for accepting the obligation to perform if exercised.\n\nFor commodity traders, options are particularly useful for: (1) Defined-risk directional trades — buy a call option on wheat before a potentially bullish WASDE. Maximum loss is the premium paid. (2) Hedging — a farmer can buy put options to protect downside price risk while retaining upside if prices rise. (3) Volatility trading — options pricing reflects market expectations of future volatility. If you think the market underestimates how much prices will move (e.g., before a critical weather window), buying options on both sides (straddle) can profit from the move regardless of direction." },
+      { heading:"The carry trade and storage costs",
+        content:"The 'cost of carry' is the cost to store a physical commodity from one period to another: storage fees + insurance + financing cost + physical deterioration. In efficient markets, the price difference between nearby and deferred futures contracts should equal the full cost of carry. When it does, the market is in 'full carry'.\n\nWhen markets are trading at less than full carry, it signals that physical supply is tight — the premium for owning the commodity now (for immediate delivery) exceeds the carry value. This is backwardation. As stocks are consumed over the marketing year, markets typically move from contango (plentiful stocks) toward backwardation (tight stocks). Understanding where the calendar spread is trading relative to full carry tells you about the physical tightness of the market in real-time — often before the WASDE reports it." },
+      { heading:"Algorithmic trading concepts",
+        content:"Algorithmic trading uses pre-defined rules to enter and exit trades automatically — removing emotion from the execution process. The simplest algo is the moving average crossover system already implemented in Muster's backtesting tab. More sophisticated systems incorporate multiple signals: momentum (trend-following), mean reversion, seasonality, and fundamental data.\n\nMuster's Auto Trader implements a rules-based system: a weighted 6-variable score must exceed a threshold, pass 5 entry filters, and use Kelly-sized positions. This is equivalent in structure to a systematic managed futures strategy. The key advantage of systematic trading is consistency — the rules are applied the same way every time, eliminating cognitive biases like loss aversion, overconfidence, and recency bias.\n\nThe limitation: algo systems backtest well on the past but can fail in regime changes. This is why Muster includes regime detection (TRENDING vs RANGING vs HIGH_VOL) as a filter." },
+      { heading:"Building a trading plan",
+        content:"A trading plan is a written document that defines every aspect of your trading approach before you start trading. Without one, you will make different decisions in different emotional states — undermining consistency.\n\nYour trading plan should cover: (1) UNIVERSE — which instruments you trade and why. (2) EDGE — what is your specific advantage? (supply/demand knowledge? weather expertise? COT reading?) (3) ENTRY RULES — exact conditions that must be met before entering a trade. (4) EXIT RULES — both stop-loss and take-profit rules, defined in advance. (5) POSITION SIZING — your specific risk-per-trade rule (e.g., 1.5% of capital). (6) RISK LIMITS — maximum drawdown before you stop trading and reassess. (7) REVIEW PROCESS — how often you review your performance and update your plan.\n\nThe Muster Trade Journal and Auto Trader together provide the infrastructure to live your trading plan systematically. Start with paper trading, track every trade, review monthly." },
+    ]
+  },
 ];
 
 // Generate simulated OHLC chart data
@@ -1300,68 +1440,239 @@ function AgEquities(){
 // EDUCATION CENTRE
 // ─────────────────────────────────────────────────────────────────────────────
 function Education(){
+  // Progress stored in localStorage
+  const STORAGE_KEY="muster_edu_progress_v1";
+  const loadProgress=()=>{try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");}catch{return {};}};
+  const [progress,setProgress]=useState(loadProgress);
+  const saveProgress=p=>{setProgress(p);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(p));}catch{}};
+
   const [activeMod,setActiveMod]=useState(null);
   const [activeSec,setActiveSec]=useState(0);
+  const [quizMode,setQuizMode]=useState(false);
+  const [quizAnswers,setQuizAnswers]=useState({});
+  const [quizSubmitted,setQuizSubmitted]=useState(false);
   const [aiQ,setAiQ]=useState(""); const [aiA,setAiA]=useState(""); const [aiLoading,setAiLoading]=useState(false);
+
   const levelColor={Beginner:C.eucalyptus,Intermediate:C.warning,Advanced:C.navy};
+
+  // Module unlock logic: module N is unlocked if previous module's quiz is passed (or no quiz)
+  function isUnlocked(idx){
+    if(idx===0) return true;
+    const prev=EDU_MODULES[idx-1];
+    if(!prev.quiz) return true;
+    return !!(progress[prev.id+"_quiz"]==="pass");
+  }
+  function isPassed(mod){ return progress[mod.id+"_quiz"]==="pass"; }
+
+  // Count overall progress
+  const unlockedCount=EDU_MODULES.filter((_,i)=>isUnlocked(i)).length;
+  const passedQuizzes=EDU_MODULES.filter(m=>m.quiz&&isPassed(m)).length;
+  const totalQuizzes=EDU_MODULES.filter(m=>m.quiz).length;
+
   async function askAI(){
     if(!aiQ.trim()||aiLoading)return; setAiLoading(true); setAiA("");
-    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,system:"You are an agricultural commodity trading educator. The student is new to commodity trading and based in Australia. Give clear, educational answers using real market examples. 3-4 paragraphs max. Reference Australian context where relevant (Interactive Brokers AU, ASX-listed Ag stocks, ABARE, AU wheat exports).",messages:[{role:"user",content:aiQ}]})});const data=await res.json();setAiA(data.content?.map(b=>b.text||"").join("")||"Couldn't get a response.");}catch{setAiA("Connection error.");}
+    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,system:"You are an agricultural commodity trading educator. The student is new to commodity trading and based in Australia. Give clear, educational answers using real market examples. 3-4 paragraphs max. Reference Australian context where relevant (Interactive Brokers AU, ASX-listed Ag stocks, ABARES, AU wheat exports).",messages:[{role:"user",content:aiQ}]})});const data=await res.json();setAiA(data.content?.map(b=>b.text||"").join("")||"Couldn't get a response.");}catch{setAiA("Connection error.");}
     setAiLoading(false);
   }
+
+  function submitQuiz(mod){
+    const q=mod.quiz.questions;
+    const correct=q.filter((item,i)=>quizAnswers[i]===item.answer).length;
+    const passed=correct>=Math.ceil(q.length*0.67);
+    setQuizSubmitted(true);
+    if(passed) saveProgress({...progress,[mod.id+"_quiz"]:"pass"});
+  }
+
+  // ── Module detail view ──────────────────────────────────────────────────────
   if(activeMod){
     const mod=EDU_MODULES.find(m=>m.id===activeMod);
-    if(!mod) return <div style={{color:C.wheatDark,padding:20}}>Module not found.</div>;
+    if(!mod) return null;
     const sec=mod.sections[activeSec]||mod.sections[0];
-    if(!sec) return <div style={{color:C.wheatDark,padding:20}}>Section not found.</div>;
+    const modIdx=EDU_MODULES.indexOf(mod);
+    const locked=!isUnlocked(modIdx);
+
+    if(quizMode&&mod.quiz){
+      const q=mod.quiz.questions;
+      const correct=quizSubmitted?q.filter((item,i)=>quizAnswers[i]===item.answer).length:null;
+      const passed=quizSubmitted&&correct>=Math.ceil(q.length*0.67);
+      return (
+        <div>
+          <button onClick={()=>{setQuizMode(false);setQuizSubmitted(false);setQuizAnswers({});}} style={{background:"none",border:"none",color:C.eucalyptus,cursor:"pointer",fontSize:12,fontFamily:"'DM Mono',monospace",marginBottom:16,padding:0}}>← Back to {mod.title}</button>
+          <Card style={{padding:24,maxWidth:640}}>
+            <div style={{marginBottom:20}}>
+              <span style={{background:mod.color,color:C.white,padding:"4px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"0.1em"}}>{mod.quiz.label}</span>
+              <div style={{marginTop:8,color:C.wheatDark,fontSize:11,fontFamily:"'DM Mono',monospace"}}>Pass 2 out of 3 to unlock {mod.quiz.unlocks}</div>
+            </div>
+            {q.map((item,qi)=>{
+              const chosen=quizAnswers[qi];
+              return (
+                <div key={qi} style={{marginBottom:22}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.charcoal,marginBottom:10,lineHeight:1.5}}>{qi+1}. {item.q}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {item.opts.map((opt,oi)=>{
+                      const sel=chosen===oi;
+                      const showCorrect=quizSubmitted&&oi===item.answer;
+                      const showWrong=quizSubmitted&&sel&&oi!==item.answer;
+                      const bg=showCorrect?C.eucalyptusPale:showWrong?C.negativePale:sel?C.navyPale:C.offwhite;
+                      const border=showCorrect?C.eucalyptus:showWrong?C.negative:sel?C.navy:C.lightGrey;
+                      return (
+                        <button key={oi} onClick={()=>{if(!quizSubmitted)setQuizAnswers(p=>({...p,[qi]:oi}));}}
+                          style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:bg,border:`1.5px solid ${border}`,borderRadius:4,cursor:quizSubmitted?"default":"pointer",textAlign:"left",fontSize:12,color:C.charcoal,fontFamily:"'IBM Plex Sans',sans-serif"}}>
+                          <span style={{width:20,height:20,borderRadius:"50%",border:`1.5px solid ${border}`,background:sel||showCorrect?"":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700,color:showCorrect?C.eucalyptus:showWrong?C.negative:sel?C.navy:C.lightGrey}}>
+                            {showCorrect?"✓":showWrong?"✗":sel?"●":String.fromCharCode(65+oi)}
+                          </span>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            {!quizSubmitted
+              ? <button onClick={()=>submitQuiz(mod)} disabled={Object.keys(quizAnswers).length<q.length} style={{background:Object.keys(quizAnswers).length<q.length?C.lightGrey:C.eucalyptus,color:C.white,border:"none",borderRadius:3,padding:"10px 20px",cursor:Object.keys(quizAnswers).length<q.length?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>SUBMIT ANSWERS</button>
+              : <div style={{padding:"16px 20px",background:passed?C.eucalyptusPale:C.negativePale,border:`1px solid ${passed?C.eucalyptus:C.negative}`,borderRadius:4}}>
+                  <div style={{fontSize:14,fontWeight:700,color:passed?C.eucalyptus:C.negative,marginBottom:6}}>{passed?"✓ PASSED":"✗ NOT PASSED"} — {correct}/{q.length} correct</div>
+                  <div style={{fontSize:12,color:C.charcoal,marginBottom:12}}>{passed?`${mod.quiz.unlocks} is now unlocked. Excellent work.`:"Review the material and try again. You need 2 out of 3 correct."}</div>
+                  <button onClick={()=>{setQuizMode(false);setQuizSubmitted(false);setQuizAnswers({});}} style={{background:passed?C.eucalyptus:C.navy,color:C.white,border:"none",borderRadius:3,padding:"8px 16px",cursor:"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700,marginRight:8}}>← Back to lesson</button>
+                  {!passed&&<button onClick={()=>{setQuizSubmitted(false);setQuizAnswers({});}} style={{background:C.white,color:C.charcoal,border:`1px solid ${C.lightGrey}`,borderRadius:3,padding:"8px 16px",cursor:"pointer",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Try again</button>}
+                </div>
+            }
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div>
-        <button onClick={()=>{setActiveMod(null);setActiveSec(0);}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:C.eucalyptus,cursor:"pointer",fontSize:12,fontFamily:"'DM Mono',monospace",marginBottom:16,padding:0}}>← Back to modules</button>
-        <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:18}}>
-          <Card style={{padding:12,height:"fit-content"}}>
-            <div style={{color:C.charcoal,fontSize:12,fontWeight:700,marginBottom:4}}>{mod.emoji} {mod.title}</div>
-            <div style={{display:"flex",gap:5,marginBottom:12}}><span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:600,color:C.white,background:levelColor[mod.level]||C.navy}}>{mod.level}</span><span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.charcoal,background:C.eggshell,border:`1px solid ${C.lightGrey}`}}>{mod.duration}</span></div>
-            {mod.sections.map((s,i)=><button key={i} onClick={()=>setActiveSec(i)} style={{background:activeSec===i?C.eucalyptusPale:"none",border:`1px solid ${activeSec===i?C.eucalyptus:C.lightGrey}`,borderRadius:3,padding:"7px 9px",cursor:"pointer",textAlign:"left",color:activeSec===i?C.eucalyptus:C.charcoal,fontSize:11,width:"100%",marginBottom:4}}>{i+1}. {s.heading}</button>)}
-          </Card>
+        <button onClick={()=>{setActiveMod(null);setActiveSec(0);setQuizMode(false);}} style={{background:"none",border:"none",color:C.eucalyptus,cursor:"pointer",fontSize:12,fontFamily:"'DM Mono',monospace",marginBottom:16,padding:0}}>← Back to curriculum</button>
+        {locked&&<div style={{padding:"12px 16px",background:C.warningPale,border:`1px solid ${C.warning}`,borderRadius:4,marginBottom:16,fontSize:12,color:C.warning,fontFamily:"'DM Mono',monospace"}}>🔒 Complete the previous module's quiz to unlock this content.</div>}
+        <div style={{display:"grid",gridTemplateColumns:"220px 1fr",gap:18}}>
           <div>
-            <Card style={{padding:22,marginBottom:14}}>
-              <div style={{color:C.charcoal,fontSize:16,fontWeight:700,marginBottom:14}}>{sec.heading}</div>
-              {(sec.content||'').split("\n\n").map((p,i)=><p key={i} style={{color:C.charcoal,fontSize:13,lineHeight:1.75,marginBottom:12,fontFamily:"'Lora',serif"}}>{p}</p>)}
+            <Card style={{padding:14,marginBottom:12}}>
+              <div style={{fontSize:20,marginBottom:6}}>{mod.emoji}</div>
+              <div style={{color:C.charcoal,fontSize:13,fontWeight:700,marginBottom:2}}>{mod.title}</div>
+              <div style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:10}}>{mod.subtitle}</div>
+              <span style={{fontSize:9,padding:"2px 8px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:C.white,background:levelColor[mod.level]||C.navy}}>{mod.level}</span>
+              <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:3}}>
+                {mod.sections.map((s,i)=>(
+                  <button key={i} onClick={()=>setActiveSec(i)}
+                    style={{background:activeSec===i?C.eucalyptusPale:"none",border:`1px solid ${activeSec===i?C.eucalyptus:C.lightGrey}`,borderRadius:3,padding:"7px 10px",cursor:"pointer",textAlign:"left",color:activeSec===i?C.eucalyptus:C.charcoal,fontSize:11,lineHeight:1.4}}>
+                    {i+1}. {s.heading}
+                  </button>
+                ))}
+              </div>
             </Card>
-            <div style={{display:"flex",justifyContent:"space-between"}}>
+            {mod.quiz&&(
+              <Card style={{padding:14,borderLeft:`3px solid ${mod.color}`}}>
+                <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,color:mod.color,letterSpacing:"0.08em",marginBottom:6}}>MODULE QUIZ</div>
+                <div style={{fontSize:11,color:C.charcoal,marginBottom:8,lineHeight:1.4}}>{mod.quiz.label}</div>
+                {isPassed(mod)
+                  ? <div style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:C.eucalyptus,fontWeight:700}}>✓ PASSED — {mod.quiz.unlocks} unlocked</div>
+                  : <button onClick={()=>setQuizMode(true)} disabled={locked}
+                      style={{background:locked?C.lightGrey:mod.color,color:C.white,border:"none",borderRadius:3,padding:"8px 12px",cursor:locked?"not-allowed":"pointer",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700,width:"100%"}}>
+                      {locked?"🔒 LOCKED":"TAKE QUIZ →"}
+                    </button>
+                }
+              </Card>
+            )}
+          </div>
+          <div>
+            <Card style={{padding:26,marginBottom:14,opacity:locked?0.5:1}}>
+              <div style={{color:C.charcoal,fontSize:17,fontWeight:700,marginBottom:16,fontFamily:"'Lora',serif"}}>{sec.heading}</div>
+              {(sec.content||'').split("\n\n").map((p,i)=><p key={i} style={{color:C.charcoal,fontSize:13,lineHeight:1.8,marginBottom:14,fontFamily:"'Lora',serif"}}>{p}</p>)}
+            </Card>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <button onClick={()=>setActiveSec(s=>Math.max(0,s-1))} disabled={activeSec===0} style={{background:C.white,color:C.charcoal,border:`1px solid ${C.lightGrey}`,borderRadius:3,padding:"8px 16px",cursor:activeSec===0?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",opacity:activeSec===0?0.4:1}}>← PREVIOUS</button>
-              <button onClick={()=>setActiveSec(s=>Math.min(mod.sections.length-1,s+1))} disabled={activeSec===mod.sections.length-1} style={{background:C.eucalyptus,color:C.white,border:"none",borderRadius:3,padding:"8px 16px",cursor:activeSec===mod.sections.length-1?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",opacity:activeSec===mod.sections.length-1?0.4:1}}>NEXT →</button>
+              <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:C.wheatDark}}>{activeSec+1} / {mod.sections.length}</span>
+              {activeSec<mod.sections.length-1
+                ? <button onClick={()=>setActiveSec(s=>s+1)} style={{background:C.eucalyptus,color:C.white,border:"none",borderRadius:3,padding:"8px 16px",cursor:"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>NEXT →</button>
+                : mod.quiz&&!isPassed(mod)
+                  ? <button onClick={()=>setQuizMode(true)} disabled={locked} style={{background:locked?C.lightGrey:mod.color,color:C.white,border:"none",borderRadius:3,padding:"8px 16px",cursor:locked?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{locked?"🔒 LOCKED":"TAKE QUIZ →"}</button>
+                  : <span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:C.eucalyptus,fontWeight:700}}>{isPassed(mod)?"✓ MODULE COMPLETE":"End of module"}</span>
+              }
             </div>
           </div>
         </div>
       </div>
     );
   }
+
+  // ── Curriculum overview ─────────────────────────────────────────────────────
   return (
     <div>
-      <SectionHead label="EDUCATION CENTRE" sub="Structured learning for new commodity traders"/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12,marginBottom:26,alignItems:"stretch"}}>
-        {EDU_MODULES.map(mod=>(
-          <Card key={mod.id} onClick={()=>{setActiveMod(mod.id);setActiveSec(0);}} style={{padding:18,cursor:"pointer",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.10)";e.currentTarget.style.borderColor=C.eucalyptus;}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=C.lightGrey;}}>
-            <div style={{fontSize:26,marginBottom:8}}>{mod.emoji}</div>
-            <div style={{color:C.charcoal,fontSize:13,fontWeight:700,marginBottom:6}}>{mod.title}</div>
-            <div style={{display:"flex",gap:6,marginBottom:8}}><span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:600,color:C.white,background:levelColor[mod.level]||C.navy}}>{mod.level}</span><span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.charcoal,background:C.eggshell,border:`1px solid ${C.lightGrey}`}}>{mod.duration}</span></div>
-            <div style={{color:C.charcoal,fontSize:11,lineHeight:1.5}}>{mod.sections.length} sections</div>
-          </Card>
-        ))}
+      {/* Progress header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:20}}>
+        <div>
+          <span style={{background:C.eucalyptus,color:C.white,padding:"4px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:"0.12em",fontWeight:600,display:"inline-block",marginBottom:6}}>COMMODITY TRADING CURRICULUM</span>
+          <div style={{color:C.wheatDark,fontSize:11,fontFamily:"'DM Mono',monospace"}}>8 modules · Beginner through Advanced · {passedQuizzes}/{totalQuizzes} quizzes passed</div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:24,fontWeight:700,color:C.eucalyptus,fontFamily:"'Lora',serif"}}>{unlockedCount}<span style={{fontSize:13,color:C.wheatDark}}> / {EDU_MODULES.length}</span></div>
+          <div style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:C.wheatDark}}>MODULES UNLOCKED</div>
+        </div>
       </div>
+      {/* Progress bar */}
+      <div style={{height:6,background:C.lightGrey,borderRadius:3,marginBottom:26,overflow:"hidden"}}>
+        <div style={{height:"100%",width:`${(unlockedCount/EDU_MODULES.length)*100}%`,background:C.eucalyptus,borderRadius:3,transition:"width 0.4s"}}/>
+      </div>
+
+      {/* Module grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12,marginBottom:30}}>
+        {EDU_MODULES.map((mod,idx)=>{
+          const locked=!isUnlocked(idx);
+          const passed=isPassed(mod);
+          const borderColor=passed?C.eucalyptus:locked?C.lightGrey:mod.color;
+          return (
+            <Card key={mod.id}
+              onClick={()=>{setActiveMod(mod.id);setActiveSec(0);setQuizMode(false);}}
+              style={{padding:18,cursor:"pointer",borderLeft:`4px solid ${borderColor}`,opacity:locked?0.55:1,transition:"all 0.2s",position:"relative"}}
+              onMouseEnter={e=>{if(!locked){e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.10)";e.currentTarget.style.transform="translateY(-1px)";}}}
+              onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="none";}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                <div style={{fontSize:24}}>{locked?"🔒":mod.emoji}</div>
+                <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+                  <span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:C.white,background:levelColor[mod.level]||C.navy}}>{mod.level}</span>
+                  {passed&&<span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:C.eucalyptus,background:C.eucalyptusPale,border:`1px solid ${C.eucalyptus}`}}>✓ DONE</span>}
+                </div>
+              </div>
+              <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:3}}>{mod.subtitle}</div>
+              <div style={{color:C.charcoal,fontSize:14,fontWeight:700,marginBottom:4}}>{mod.title}</div>
+              <div style={{color:C.wheatDark,fontSize:11,marginBottom:12}}>{mod.sections.length} lessons{mod.quiz?` · Quiz: ${mod.quiz.label}`:""}</div>
+              {/* Lesson list preview */}
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                {mod.sections.slice(0,3).map((s,i)=>(
+                  <div key={i} style={{fontSize:10,color:locked?C.lightGrey:C.charcoal,display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{color:locked?C.lightGrey:C.eucalyptus,fontSize:8}}>›</span>{s.heading}
+                  </div>
+                ))}
+                {mod.sections.length>3&&<div style={{fontSize:10,color:C.wheatDark,fontFamily:"'DM Mono',monospace"}}>+{mod.sections.length-3} more</div>}
+              </div>
+              {mod.quiz&&(
+                <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.offwhite}`}}>
+                  <span style={{fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,color:passed?C.eucalyptus:locked?C.lightGrey:mod.color}}>
+                    {passed?"✓ PASSED: "+mod.quiz.label:locked?"🔒 "+mod.quiz.label:"◎ "+mod.quiz.label+" → unlocks "+mod.quiz.unlocks}
+                  </span>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* AI Tutor */}
       <Card style={{padding:20}}>
         <SectionHead label="ASK THE AI TUTOR" sub="Plain-English explanations of any commodity market concept"/>
         <div style={{display:"flex",gap:8,marginBottom:10}}>
           <input value={aiQ} onChange={e=>setAiQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&askAI()} placeholder="e.g. What is basis? How does a crush margin work? What is contango?" style={{flex:1,padding:"10px 14px",border:`1px solid ${C.lightGrey}`,borderRadius:3,fontSize:13,color:C.charcoal,outline:"none"}} onFocus={e=>e.target.style.borderColor=C.eucalyptus} onBlur={e=>e.target.style.borderColor=C.lightGrey}/>
-          <button onClick={askAI} disabled={aiLoading} style={{background:aiLoading?C.lightGrey:C.eucalyptus,color:C.white,border:"none",borderRadius:3,padding:"10px 18px",cursor:aiLoading?"not-allowed":"pointer",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{aiLoading?"...":"EXPLAIN →"}</button>
+          <button onClick={askAI} disabled={aiLoading} style={{background:aiLoading?C.lightGrey:C.eucalyptus,color:C.white,border:"none",borderRadius:3,padding:"10px 18px",cursor:aiLoading?"not-allowed":"pointer",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600,whiteSpace:"nowrap"}}>{aiLoading?"...":"EXPLAIN →"}</button>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
           {["What is basis?","How does a crush margin work?","What is contango vs backwardation?","Explain open interest","What is a limit move?","How do I read a futures quote?"].map((q,i)=>(
             <button key={i} onClick={()=>setAiQ(q)} style={{background:C.eggshell,border:`1px solid ${C.lightGrey}`,borderRadius:2,color:C.charcoal,fontSize:11,padding:"4px 10px",cursor:"pointer"}} onMouseEnter={e=>{e.target.style.borderColor=C.eucalyptus;e.target.style.color=C.eucalyptus;}} onMouseLeave={e=>{e.target.style.borderColor=C.lightGrey;e.target.style.color=C.charcoal;}}>{q}</button>
           ))}
         </div>
-        {aiLoading&&<div style={{color:C.wheatDark,fontSize:12,fontFamily:"'DM Mono',monospace"}}><span style={{animation:"blink 1s infinite"}}>▋</span> Composing explanation...</div>}
+        {aiLoading&&<div style={{color:C.wheatDark,fontSize:12,fontFamily:"'DM Mono',monospace"}}>▋ Composing explanation...</div>}
         {aiA&&<Card style={{padding:16,background:C.eggshell}}><div style={{color:C.wheat,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:8,letterSpacing:"0.12em"}}>◆ MUSTER TUTOR</div><div style={{color:C.charcoal,fontSize:13,lineHeight:1.7,fontFamily:"'Lora',serif"}}>{aiA}</div></Card>}
       </Card>
     </div>
