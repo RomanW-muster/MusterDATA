@@ -1,11 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// MUSTER — AUTO TRADER (PAPER TRADING MODULE)
-// Save as src/AutoTrader.jsx
-//
-// Add to App.jsx:
-//   import AutoTrader from "./AutoTrader";
-//   { id:"autotrader", label:"AUTO TRADER", emoji:"🤖" } in TABS
-//   {tab==="autotrader" && <AutoTrader/>} in content section
+// MUSTER — AUTO TRADER  (Professional Trading Model)
+// src/AutoTrader.jsx
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -22,777 +17,827 @@ const C = {
   white:"#ffffff", offwhite:"#fafaf8",
 };
 
-// ─── TRADEABLE UNIVERSE ───────────────────────────────────────────────────────
+// ─── INSTRUMENTS ─────────────────────────────────────────────────────────────
 const INSTRUMENTS = [
-  // Grains
-  { symbol:"ZC", name:"Corn",           emoji:"🌽", sector:"Grains",     contractSize:5000,  unit:"¢/bu",  tickSize:0.25, tickValue:12.50, margin:1500,  price:478.25  },
-  { symbol:"ZW", name:"Wheat",          emoji:"🌾", sector:"Grains",     contractSize:5000,  unit:"¢/bu",  tickSize:0.25, tickValue:12.50, margin:1800,  price:592.50  },
-  { symbol:"ZS", name:"Soybeans",       emoji:"🫘", sector:"Grains",     contractSize:5000,  unit:"¢/bu",  tickSize:0.25, tickValue:12.50, margin:2200,  price:1087.75 },
-  { symbol:"ZM", name:"Soy Meal",       emoji:"🌱", sector:"Grains",     contractSize:100,   unit:"$/ton", tickSize:0.10, tickValue:10.00, margin:1400,  price:312.40  },
-  { symbol:"ZO", name:"Oats",           emoji:"🌿", sector:"Grains",     contractSize:5000,  unit:"¢/bu",  tickSize:0.25, tickValue:12.50, margin:800,   price:312.50  },
-  // Livestock
-  { symbol:"LE", name:"Live Cattle",    emoji:"🐄", sector:"Livestock",  contractSize:400,   unit:"¢/lb",  tickSize:0.025,tickValue:10.00, margin:1800,  price:184.325 },
-  { symbol:"HE", name:"Lean Hogs",      emoji:"🐖", sector:"Livestock",  contractSize:400,   unit:"¢/lb",  tickSize:0.025,tickValue:10.00, margin:1400,  price:91.275  },
-  { symbol:"GF", name:"Feeder Cattle",  emoji:"🐂", sector:"Livestock",  contractSize:500,   unit:"¢/lb",  tickSize:0.025,tickValue:12.50, margin:2200,  price:252.50  },
-  // Softs / Other Ag
-  { symbol:"CT", name:"Cotton",         emoji:"🌿", sector:"Softs",      contractSize:500,   unit:"¢/lb",  tickSize:0.01, tickValue:5.00,  margin:1200,  price:78.45   },
-  { symbol:"KC", name:"Coffee",         emoji:"☕", sector:"Softs",      contractSize:375,   unit:"¢/lb",  tickSize:0.05, tickValue:18.75, margin:2800,  price:342.80  },
-  { symbol:"SB", name:"Sugar #11",      emoji:"🍬", sector:"Softs",      contractSize:1120,  unit:"¢/lb",  tickSize:0.01, tickValue:11.20, margin:900,   price:19.85   },
-  // Fertiliser / Inputs
-  { symbol:"UAN", name:"Urea (proxy)",  emoji:"🧪", sector:"Inputs",     contractSize:100,   unit:"$/ton", tickSize:1.00, tickValue:100,   margin:1500,  price:285.00  },
-  // Currencies (Ag relevant)
-  { symbol:"6A",  name:"AUD/USD",       emoji:"🇦🇺", sector:"Currencies", contractSize:100000,unit:"USD",  tickSize:0.0001,tickValue:10.00,margin:1200,  price:0.6234  },
-  { symbol:"6B",  name:"BRL/USD (proxy)",emoji:"🇧🇷",sector:"Currencies", contractSize:100000,unit:"USD",  tickSize:0.0001,tickValue:10.00,margin:1400,  price:0.1966  },
-  { symbol:"DX",  name:"US Dollar Index",emoji:"💵",sector:"Currencies", contractSize:1000,  unit:"pts",   tickSize:0.005,tickValue:5.00,  margin:1800,  price:104.23  },
-  // Energy (farm inputs)
-  { symbol:"HO",  name:"Heating Oil",   emoji:"⛽", sector:"Energy",     contractSize:42000, unit:"$/gal", tickSize:0.0001,tickValue:4.20, margin:5000,  price:2.685   },
-  { symbol:"NG",  name:"Natural Gas",   emoji:"🔥", sector:"Energy",     contractSize:10000, unit:"$/MMBtu",tickSize:0.001,tickValue:10.00,margin:2000,  price:1.924   },
+  { symbol:"ZC",  name:"Corn",            emoji:"🌽", sector:"Grains",     contractSize:5000,   unit:"¢/bu",   tickSize:0.25,  tickValue:12.50, margin:1500, price:478.25  },
+  { symbol:"ZW",  name:"Wheat",           emoji:"🌾", sector:"Grains",     contractSize:5000,   unit:"¢/bu",   tickSize:0.25,  tickValue:12.50, margin:1800, price:592.50  },
+  { symbol:"ZS",  name:"Soybeans",        emoji:"🫘", sector:"Grains",     contractSize:5000,   unit:"¢/bu",   tickSize:0.25,  tickValue:12.50, margin:2200, price:1087.75 },
+  { symbol:"ZM",  name:"Soy Meal",        emoji:"🌱", sector:"Grains",     contractSize:100,    unit:"$/ton",  tickSize:0.10,  tickValue:10.00, margin:1400, price:312.40  },
+  { symbol:"ZO",  name:"Oats",            emoji:"🌿", sector:"Grains",     contractSize:5000,   unit:"¢/bu",   tickSize:0.25,  tickValue:12.50, margin:800,  price:312.50  },
+  { symbol:"LE",  name:"Live Cattle",     emoji:"🐄", sector:"Livestock",  contractSize:400,    unit:"¢/lb",   tickSize:0.025, tickValue:10.00, margin:1800, price:184.325 },
+  { symbol:"HE",  name:"Lean Hogs",       emoji:"🐖", sector:"Livestock",  contractSize:400,    unit:"¢/lb",   tickSize:0.025, tickValue:10.00, margin:1400, price:91.275  },
+  { symbol:"GF",  name:"Feeder Cattle",   emoji:"🐂", sector:"Livestock",  contractSize:500,    unit:"¢/lb",   tickSize:0.025, tickValue:12.50, margin:2200, price:252.50  },
+  { symbol:"CT",  name:"Cotton",          emoji:"🌿", sector:"Softs",      contractSize:500,    unit:"¢/lb",   tickSize:0.01,  tickValue:5.00,  margin:1200, price:78.45   },
+  { symbol:"KC",  name:"Coffee",          emoji:"☕", sector:"Softs",      contractSize:375,    unit:"¢/lb",   tickSize:0.05,  tickValue:18.75, margin:2800, price:342.80  },
+  { symbol:"SB",  name:"Sugar #11",       emoji:"🍬", sector:"Softs",      contractSize:1120,   unit:"¢/lb",   tickSize:0.01,  tickValue:11.20, margin:900,  price:19.85   },
+  { symbol:"UAN", name:"Urea (proxy)",    emoji:"🧪", sector:"Inputs",     contractSize:100,    unit:"$/ton",  tickSize:1.00,  tickValue:100,   margin:1500, price:285.00  },
+  { symbol:"6A",  name:"AUD/USD",         emoji:"🇦🇺", sector:"Currencies", contractSize:100000, unit:"USD",    tickSize:0.0001,tickValue:10.00, margin:1200, price:0.6234  },
+  { symbol:"DX",  name:"US Dollar Index", emoji:"💵", sector:"Currencies", contractSize:1000,   unit:"pts",    tickSize:0.005, tickValue:5.00,  margin:1800, price:104.23  },
+  { symbol:"HO",  name:"Heating Oil",     emoji:"⛽", sector:"Energy",     contractSize:42000,  unit:"$/gal",  tickSize:0.0001,tickValue:4.20,  margin:5000, price:2.685   },
+  { symbol:"NG",  name:"Natural Gas",     emoji:"🔥", sector:"Energy",     contractSize:10000,  unit:"$/MMBtu",tickSize:0.001, tickValue:10.00, margin:2000, price:1.924   },
 ];
 
-// Signal data (mirrors Muster scorecard)
+// ─── VARIABLE WEIGHTS ─────────────────────────────────────────────────────────
+const WEIGHTS = { wasde:0.25, weather:0.20, exports:0.20, cot:0.15, seasonal:0.10, currency:0.10 };
+const VAR_LABELS = { wasde:"WASDE", weather:"Weather", exports:"Exports", cot:"COT", seasonal:"Seasonal", currency:"Currency" };
+
+// ─── SIGNAL DATA  (per-variable numeric scores 0–100) ─────────────────────────
+// Bullish ~70-85, Neutral ~45-55, Bearish ~15-35
 const SIGNAL_DATA = {
-  ZC: { score:68, overall:"BULLISH",  vars:{ wasde:"BULLISH", weather:"BULLISH", cot:"BULLISH", exports:"BEARISH", seasonal:"NEUTRAL", currency:"BULLISH" }},
-  ZW: { score:74, overall:"BULLISH",  vars:{ wasde:"BULLISH", weather:"BULLISH", cot:"BEARISH", exports:"BULLISH", seasonal:"BULLISH", currency:"BULLISH" }},
-  ZS: { score:52, overall:"NEUTRAL",  vars:{ wasde:"BEARISH", weather:"BULLISH", cot:"BULLISH", exports:"NEUTRAL", seasonal:"BEARISH", currency:"BEARISH" }},
-  ZM: { score:55, overall:"NEUTRAL",  vars:{ wasde:"NEUTRAL", weather:"NEUTRAL", cot:"BULLISH", exports:"BULLISH", seasonal:"NEUTRAL", currency:"BEARISH" }},
-  LE: { score:78, overall:"BULLISH",  vars:{ wasde:"BULLISH", weather:"BULLISH", cot:"BULLISH", exports:"NEUTRAL", seasonal:"BULLISH", currency:"BULLISH" }},
-  HE: { score:38, overall:"BEARISH",  vars:{ wasde:"BEARISH", weather:"BEARISH", cot:"NEUTRAL", exports:"BULLISH", seasonal:"BEARISH", currency:"BEARISH" }},
-  GF: { score:72, overall:"BULLISH",  vars:{ wasde:"BULLISH", weather:"NEUTRAL", cot:"BULLISH", exports:"NEUTRAL", seasonal:"BULLISH", currency:"NEUTRAL" }},
-  CT: { score:58, overall:"NEUTRAL",  vars:{ wasde:"NEUTRAL", weather:"BULLISH", cot:"NEUTRAL", exports:"NEUTRAL", seasonal:"NEUTRAL", currency:"NEUTRAL" }},
-  KC: { score:62, overall:"BULLISH",  vars:{ wasde:"BULLISH", weather:"BULLISH", cot:"NEUTRAL", exports:"BULLISH", seasonal:"NEUTRAL", currency:"NEUTRAL" }},
-  SB: { score:45, overall:"NEUTRAL",  vars:{ wasde:"BEARISH", weather:"NEUTRAL", cot:"NEUTRAL", exports:"NEUTRAL", seasonal:"NEUTRAL", currency:"NEUTRAL" }},
-  DX: { score:35, overall:"BEARISH",  vars:{ wasde:"BEARISH", weather:"NEUTRAL", cot:"BEARISH", exports:"BEARISH", seasonal:"NEUTRAL", currency:"BEARISH" }},
-  "6A":{ score:60, overall:"NEUTRAL", vars:{ wasde:"NEUTRAL", weather:"NEUTRAL", cot:"NEUTRAL", exports:"BULLISH", seasonal:"NEUTRAL", currency:"BULLISH" }},
+  ZC:  { vars:{ wasde:72, weather:68, exports:36, cot:70, seasonal:50, currency:74 }},
+  ZW:  { vars:{ wasde:78, weather:75, exports:71, cot:32, seasonal:72, currency:76 }},
+  ZS:  { vars:{ wasde:33, weather:65, exports:50, cot:68, seasonal:30, currency:33 }},
+  ZM:  { vars:{ wasde:50, weather:50, exports:65, cot:66, seasonal:50, currency:34 }},
+  ZO:  { vars:{ wasde:50, weather:52, exports:50, cot:50, seasonal:50, currency:50 }},
+  LE:  { vars:{ wasde:80, weather:76, exports:52, cot:78, seasonal:73, currency:74 }},
+  HE:  { vars:{ wasde:28, weather:30, exports:64, cot:50, seasonal:29, currency:30 }},
+  GF:  { vars:{ wasde:74, weather:52, exports:50, cot:70, seasonal:71, currency:50 }},
+  CT:  { vars:{ wasde:50, weather:66, exports:50, cot:50, seasonal:50, currency:50 }},
+  KC:  { vars:{ wasde:69, weather:74, exports:68, cot:52, seasonal:50, currency:50 }},
+  SB:  { vars:{ wasde:32, weather:50, exports:50, cot:50, seasonal:50, currency:50 }},
+  UAN: { vars:{ wasde:50, weather:50, exports:50, cot:50, seasonal:50, currency:50 }},
+  "6A":{ vars:{ wasde:50, weather:50, exports:64, cot:50, seasonal:50, currency:65 }},
+  DX:  { vars:{ wasde:30, weather:50, exports:30, cot:28, seasonal:50, currency:32 }},
+  HO:  { vars:{ wasde:50, weather:55, exports:50, cot:50, seasonal:50, currency:50 }},
+  NG:  { vars:{ wasde:50, weather:58, exports:50, cot:50, seasonal:48, currency:50 }},
 };
 
-// Simulated price history for sparklines
-function genPriceHistory(base, days=30, vol=0.008) {
+// ─── ENGINE FUNCTIONS ─────────────────────────────────────────────────────────
+function computeWeightedScore(vars, prevScore) {
+  const raw = Object.entries(WEIGHTS).reduce((s, [k, w]) => s + (vars[k] ?? 50) * w, 0);
+  const velocity = prevScore != null ? (raw > prevScore + 1 ? 5 : raw < prevScore - 1 ? -5 : 0) : 0;
+  return Math.min(100, Math.max(0, raw + velocity));
+}
+
+function calcATR(history, periods = 14) {
+  if (!history || history.length < 2) return (history?.[history.length - 1] || 1) * 0.008;
+  const trs = [];
+  for (let i = 1; i < history.length; i++) trs.push(Math.abs(history[i] - history[i - 1]));
+  const recent = trs.slice(-periods);
+  return recent.reduce((s, v) => s + v, 0) / recent.length;
+}
+
+function calc10DMA(history) {
+  if (!history || history.length < 2) return history?.[history.length - 1] || 0;
+  const slice = history.slice(-10);
+  return slice.reduce((s, v) => s + v, 0) / slice.length;
+}
+
+function detectRegime(history) {
+  if (!history || history.length < 20) return "RANGING";
+  const half = Math.floor(history.length / 2);
+  const earlyAvg = history.slice(0, half).reduce((s, v) => s + v, 0) / half;
+  const lateAvg = history.slice(half).reduce((s, v) => s + v, 0) / (history.length - half);
+  const atr = calcATR(history);
+  const avgPrice = history.reduce((s, v) => s + v, 0) / history.length;
+  const volPct = avgPrice > 0 ? atr / avgPrice : 0;
+  if (volPct > 0.014) return "HIGH_VOL";
+  if (volPct < 0.003) return "LOW_VOL";
+  const trend = earlyAvg > 0 ? Math.abs(lateAvg - earlyAvg) / earlyAvg : 0;
+  if (trend > 0.03) return lateAvg > earlyAvg ? "TRENDING_UP" : "TRENDING_DOWN";
+  return "RANGING";
+}
+
+function computeKelly(closedTrades, accountSize, riskPerContract) {
+  if (!closedTrades || closedTrades.length < 5) return 1;
+  const wins = closedTrades.filter(t => t.pnl > 0);
+  const losses = closedTrades.filter(t => t.pnl <= 0);
+  const winRate = wins.length / closedTrades.length;
+  const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+  const avgLoss = losses.length ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 1;
+  const k = winRate - (1 - winRate) / (avgWin / avgLoss);
+  const halfK = Math.max(0, k / 2);
+  const maxRisk = accountSize * halfK;
+  const contracts = Math.floor(maxRisk / Math.max(riskPerContract, 1));
+  return Math.min(3, Math.max(1, contracts || 1));
+}
+
+function checkEntryFilters(inst, vars, prevScore, portfolio, priceData) {
+  const history = priceData?.history || [];
+  const currentPrice = priceData?.current || inst.price;
+  const score = computeWeightedScore(vars, prevScore);
+  const atr = calcATR(history);
+  const dma10 = calc10DMA(history);
+  const regime = detectRegime(history);
+
+  const bullVarCount = Object.values(vars).filter(v => v > 60).length;
+  const bearVarCount = Object.values(vars).filter(v => v < 40).length;
+  const direction = score >= 50 ? "LONG" : "SHORT";
+  const confluenceCount = direction === "LONG" ? bullVarCount : bearVarCount;
+
+  const alreadyAligned = confluenceCount >= 5;
+  const scoreThreshold = alreadyAligned ? 65 : 70;
+  const scoreOk = direction === "LONG" ? score >= scoreThreshold : score <= (100 - scoreThreshold);
+
+  const dmaOk = direction === "LONG" ? currentPrice >= dma10 * 0.997 : currentPrice <= dma10 * 1.003;
+  const atrOk = regime !== "LOW_VOL";
+  const confluenceOk = confluenceCount >= 4;
+
+  const openPositions = portfolio.positions || [];
+  const totalMargin = openPositions.reduce((s, p) => s + (p.margin || 0), 0);
+  const sectorPositions = openPositions.filter(p => p.sector === inst.sector);
+  const sectorMargin = sectorPositions.reduce((s, p) => s + (p.margin || 0), 0);
+  const portfolioHeat = portfolio.initialCapital > 0 ? totalMargin / portfolio.initialCapital : 0;
+  const sectorHeat = portfolio.initialCapital > 0 ? sectorMargin / portfolio.initialCapital : 0;
+  const heatOk = portfolioHeat < 0.25;
+  const sectorOk = sectorHeat < 0.35;
+  const marginCapOk = (inst.margin * 2) / portfolio.initialCapital < 0.08;
+
+  const recentTrades = (portfolio.closedTrades || []).slice(-4);
+  const consecLosses = recentTrades.length === 4 && recentTrades.every(t => t.pnl < 0);
+  const dailyLossOk = (portfolio.dailyLoss || 0) > -(portfolio.initialCapital * 0.04);
+  const weeklyLossOk = (portfolio.weeklyLoss || 0) > -(portfolio.initialCapital * 0.08);
+  const equity = portfolio.cash + openPositions.reduce((s, p) => s + (p.unrealisedPnL || 0), 0);
+  const drawdown = portfolio.initialCapital > 0 ? (portfolio.initialCapital - equity) / portfolio.initialCapital : 0;
+  const drawdownOk = drawdown < 0.15;
+  const riskOk = !consecLosses && dailyLossOk && weeklyLossOk && drawdownOk && !portfolio.halted;
+
+  const passed = scoreOk && dmaOk && atrOk && confluenceOk && heatOk && sectorOk && marginCapOk && riskOk;
+  return {
+    passed, direction, score, confluenceCount, atr, dma10, regime,
+    scoreOk, dmaOk, atrOk, confluenceOk, heatOk, sectorOk, marginCapOk, riskOk,
+    portfolioHeat, sectorHeat, scoreThreshold, drawdown,
+    reasons: { consecLosses, dailyLossOk, weeklyLossOk, drawdownOk },
+  };
+}
+
+function updateAttribution(attribution, trade, vars) {
+  const next = { ...attribution };
+  const won = trade.pnl > 0;
+  Object.keys(WEIGHTS).forEach(k => {
+    const score = vars[k] ?? 50;
+    const aligned = trade.direction === "LONG" ? score > 60 : score < 40;
+    if (aligned) {
+      next[k] = { correct: (next[k]?.correct || 0) + (won ? 1 : 0), total: (next[k]?.total || 0) + 1 };
+    }
+  });
+  return next;
+}
+
+function computeStats(closedTrades, initialCapital) {
+  if (!closedTrades || closedTrades.length === 0) return null;
+  const wins = closedTrades.filter(t => t.pnl > 0);
+  const losses = closedTrades.filter(t => t.pnl <= 0);
+  const winRate = wins.length / closedTrades.length;
+  const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+  const avgLoss = losses.length ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+  const expectancy = winRate * avgWin - (1 - winRate) * avgLoss;
+  const rets = closedTrades.map(t => t.pnl / initialCapital);
+  const mean = rets.reduce((s, v) => s + v, 0) / rets.length;
+  const rfRate = 0.05 / 252;
+  const variance = rets.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / rets.length;
+  const stdDev = Math.sqrt(variance);
+  const sharpe = stdDev > 0 ? ((mean - rfRate) / stdDev) * Math.sqrt(252) : 0;
+  const downRets = rets.filter(v => v < 0);
+  const downVar = downRets.length ? downRets.reduce((s, v) => s + Math.pow(v, 2), 0) / downRets.length : 0;
+  const sortino = downVar > 0 ? ((mean - rfRate) / Math.sqrt(downVar)) * Math.sqrt(252) : 0;
+  const last10 = closedTrades.slice(-10);
+  const last20 = closedTrades.slice(-20);
+  const winRate10 = last10.length ? last10.filter(t => t.pnl > 0).length / last10.length : null;
+  const winRate20 = last20.length ? last20.filter(t => t.pnl > 0).length / last20.length : null;
+  const best = closedTrades.reduce((b, t) => t.pnl > b.pnl ? t : b, closedTrades[0]);
+  const worst = closedTrades.reduce((b, t) => t.pnl < b.pnl ? t : b, closedTrades[0]);
+  return { winRate, avgWin, avgLoss, expectancy, sharpe, sortino, winRate10, winRate20, best, worst };
+}
+
+// ─── PRICE SIMULATION ────────────────────────────────────────────────────────
+function genPriceHistory(base, days = 30, vol = 0.008) {
   const data = []; let p = base * 0.94;
-  for (let i=days; i>=0; i--) {
-    p = p * (1 + (Math.random()-0.47)*vol);
+  for (let i = days; i >= 0; i--) {
+    p = p * (1 + (Math.random() - 0.47) * vol);
     data.push(parseFloat(p.toFixed(4)));
   }
-  data[data.length-1] = base;
+  data[data.length - 1] = base;
   return data;
 }
 
-// ─── SHARED UI ────────────────────────────────────────────────────────────────
-function Card({children,style={},...r}){ return <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,display:"flex",flexDirection:"column",...style}} {...r}>{children}</div>; }
-function SectionHead({label,sub,action}){
+// ─── UI COMPONENTS ────────────────────────────────────────────────────────────
+function Card({ children, style = {}, ...r }) {
+  return <div style={{ background: C.white, border: `1px solid ${C.lightGrey}`, borderRadius: 4, display: "flex", flexDirection: "column", ...style }} {...r}>{children}</div>;
+}
+function SectionHead({ label, sub, action }) {
   return (
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:14}}>
-      <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <div>
-          <span style={{background:"#2F4F3E",color:"#ffffff",padding:"4px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",fontSize:10,letterSpacing:"0.12em",fontWeight:600,display:"inline-block",marginBottom:12}}>{label}</span>
-          {sub&&<div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",marginTop:1}}>{sub}</div>}
-        </div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14 }}>
+      <div>
+        <span style={{ background: C.eucalyptus, color: "#fff", padding: "4px 12px", borderRadius: 3, fontFamily: "'DM Mono',monospace", fontSize: 10, letterSpacing: "0.12em", fontWeight: 600, display: "inline-block", marginBottom: sub ? 4 : 0 }}>{label}</span>
+        {sub && <div style={{ color: C.wheatDark, fontSize: 9, fontFamily: "'DM Mono',monospace" }}>{sub}</div>}
       </div>
       {action}
     </div>
   );
 }
-function Btn({children,onClick,disabled,variant="green",style={}}){
-  const bg=disabled?C.lightGrey:variant==="green"?C.eucalyptus:variant==="navy"?C.navy:variant==="red"?C.negative:C.white;
-  const color=variant==="outline"?C.charcoal:C.white;
-  return <button onClick={onClick} disabled={disabled} style={{background:bg,color,border:variant==="outline"?`1px solid ${C.lightGrey}`:"none",borderRadius:3,padding:"8px 16px",cursor:disabled?"not-allowed":"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,transition:"all 0.15s",letterSpacing:"0.04em",...style}}>{children}</button>;
+function Btn({ children, onClick, disabled, variant = "green", style = {} }) {
+  const bg = disabled ? C.lightGrey : variant === "green" ? C.eucalyptus : variant === "navy" ? C.navy : variant === "red" ? C.negative : variant === "warning" ? C.warning : C.white;
+  const color = variant === "outline" ? C.charcoal : C.white;
+  return <button onClick={onClick} disabled={disabled} style={{ background: bg, color, border: variant === "outline" ? `1px solid ${C.lightGrey}` : "none", borderRadius: 3, padding: "8px 16px", cursor: disabled ? "not-allowed" : "pointer", fontSize: 11, fontFamily: "'DM Mono',monospace", fontWeight: 600, letterSpacing: "0.04em", ...style }}>{children}</button>;
 }
-function Spinner(){return <span style={{display:"inline-block",width:12,height:12,border:`2px solid ${C.lightGrey}`,borderTopColor:C.eucalyptus,borderRadius:"50%",animation:"spin 0.8s linear infinite",marginRight:6}}/>;}
-
-// ─── SPARKLINE ────────────────────────────────────────────────────────────────
-function Sparkline({data, color=C.eucalyptus, height=32}){
-  if(!data||data.length<2) return null;
-  const W=120; const min=Math.min(...data); const max=Math.max(...data); const range=max-min||1;
-  const px=(i)=>(i/(data.length-1))*W;
-  const py=(v)=>height-((v-min)/range)*height;
-  const path=data.map((v,i)=>`${i===0?"M":"L"}${px(i)},${py(v)}`).join(" ");
-  const fill=data.map((v,i)=>`${i===0?"M":"L"}${px(i)},${py(v)}`).join(" ")+` L${W},${height} L0,${height} Z`;
+function Sparkline({ data, color = C.eucalyptus, height = 32 }) {
+  if (!data || data.length < 2) return null;
+  const W = 120; const min = Math.min(...data); const max = Math.max(...data); const range = max - min || 1;
+  const px = i => (i / (data.length - 1)) * W;
+  const py = v => height - ((v - min) / range) * height;
+  const path = data.map((v, i) => `${i === 0 ? "M" : "L"}${px(i)},${py(v)}`).join(" ");
+  const fill = path + ` L${W},${height} L0,${height} Z`;
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} style={{width:120,height,display:"block"}} preserveAspectRatio="none">
-      <defs><linearGradient id={`sg_${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.15"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>
-      <path d={fill} fill={`url(#sg_${color.replace("#","")})`}/>
-      <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <svg viewBox={`0 0 ${W} ${height}`} style={{ width: 120, height, display: "block" }} preserveAspectRatio="none">
+      <defs><linearGradient id={`sg_${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.15" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+      <path d={fill} fill={`url(#sg_${color.replace("#", "")})`} />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-// ─── P&L CURVE ────────────────────────────────────────────────────────────────
-function PnLCurve({history}){
-  if(!history||history.length<2) return <div style={{height:80,display:"flex",alignItems:"center",justifyContent:"center",color:C.lightGrey,fontSize:12}}>No trade history yet</div>;
-  const W=600,H=80,PAD={t:8,b:20,l:8,r:8};
-  const min=Math.min(...history); const max=Math.max(...history); const range=max-min||1;
-  const px=(i)=>PAD.l+(i/(history.length-1))*(W-PAD.l-PAD.r);
-  const py=(v)=>PAD.t+(1-(v-min)/range)*(H-PAD.t-PAD.b);
-  const path=history.map((v,i)=>`${i===0?"M":"L"}${px(i)},${py(v)}`).join(" ");
-  const fill=path+` L${px(history.length-1)},${H-PAD.b} L${PAD.l},${H-PAD.b} Z`;
-  const isUp=history[history.length-1]>=history[0];
-  const color=isUp?C.eucalyptus:C.negative;
-  const baseline=py(0);
+function PnLCurve({ history }) {
+  if (!history || history.length < 2) return <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: C.lightGrey, fontSize: 12 }}>No trade history yet</div>;
+  const W = 560, H = 80, PAD = { t: 8, b: 20, l: 8, r: 8 };
+  const min = Math.min(...history); const max = Math.max(...history); const range = max - min || 1;
+  const px = i => PAD.l + (i / (history.length - 1)) * (W - PAD.l - PAD.r);
+  const py = v => PAD.t + (1 - (v - min) / range) * (H - PAD.t - PAD.b);
+  const path = history.map((v, i) => `${i === 0 ? "M" : "L"}${px(i)},${py(v)}`).join(" ");
+  const fill = path + ` L${px(history.length - 1)},${H - PAD.b} L${PAD.l},${H - PAD.b} Z`;
+  const isUp = history[history.length - 1] >= history[0];
+  const color = isUp ? C.eucalyptus : C.negative;
+  const baseline = py(history[0]);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:H}} preserveAspectRatio="none">
-      <defs><linearGradient id="pnlgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.2"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>
-      <line x1={PAD.l} y1={baseline} x2={W-PAD.r} y2={baseline} stroke={C.lightGrey} strokeWidth="1" strokeDasharray="3,3"/>
-      <path d={fill} fill="url(#pnlgrad)"/>
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }} preserveAspectRatio="none">
+      <defs><linearGradient id="pnlgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.2" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+      <line x1={PAD.l} y1={baseline} x2={W - PAD.r} y2={baseline} stroke={C.lightGrey} strokeWidth="1" strokeDasharray="3,3" />
+      <path d={fill} fill="url(#pnlgrad)" />
+      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
 
-// ─── SIGNAL ENGINE ────────────────────────────────────────────────────────────
-async function generateSignal(instrument, accountSize, openPositions) {
-  const sig = SIGNAL_DATA[instrument.symbol];
-  const marketContext = `
-Instrument: ${instrument.name} (${instrument.symbol})
-Current Price: ${instrument.price} ${instrument.unit}
-Contract Size: ${instrument.contractSize} ${instrument.unit}
-Margin Required: $${instrument.margin.toFixed(0)}
-Account Size: $${accountSize.toFixed(0)}
-Open Positions: ${openPositions}
-Scorecard Signal: ${sig?.overall || "NEUTRAL"} (Score: ${sig?.score || 50}/100)
-Variable Breakdown: ${sig ? Object.entries(sig.vars).map(([k,v])=>`${k}=${v}`).join(", ") : "N/A"}
-Sector: ${instrument.sector}
-`;
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514", max_tokens:400,
-        system:`You are an automated paper trading signal engine for agricultural and commodity futures markets. Your job is to analyse market data and generate precise trading signals with risk parameters.
-
-You MUST respond with ONLY valid JSON in exactly this format, no other text:
-{
-  "action": "BUY" | "SELL" | "HOLD",
-  "confidence": 0-100,
-  "contracts": 1-3,
-  "stopLoss": number,
-  "takeProfit": number,
-  "riskPercent": 0.5-5.0,
-  "reasoning": "2-3 sentence explanation",
-  "timeframe": "short" | "medium" | "long"
+function ScoreBar({ label, score, weight }) {
+  const bullish = score > 60; const bearish = score < 40;
+  const barColor = bullish ? C.eucalyptus : bearish ? C.negative : C.warning;
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: C.charcoal, fontWeight: 600 }}>{label}</span>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>w={Math.round(weight * 100)}%</span>
+          <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", fontWeight: 700, color: barColor }}>{Math.round(score)}</span>
+        </div>
+      </div>
+      <div style={{ height: 6, background: C.lightGrey, borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${score}%`, background: barColor, borderRadius: 3, transition: "width 0.4s" }} />
+      </div>
+      <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: barColor, marginTop: 2 }}>
+        {bullish ? "BULLISH" : bearish ? "BEARISH" : "NEUTRAL"}
+      </div>
+    </div>
+  );
 }
 
-Rules:
-- Only trade if confidence >= 65
-- Never risk more than 5% of account on one trade
-- Scale contracts (1-3) based on confidence: 65-74=1, 75-84=2, 85+=3
-- Set stop loss 1.5-2.5x ATR from entry (use 0.8% of price as proxy ATR)
-- Set take profit 2-3x the stop loss distance (minimum 2:1 R:R)
-- Consider existing open positions — reduce size if already 3+ positions open
-- For HOLD: still provide what price would trigger a BUY or SELL entry`,
-        messages:[{ role:"user", content:`Generate a trading signal for:\n${marketContext}\n\nRespond with JSON only.` }]
-      })
-    });
-    const data = await res.json();
-    const text = data.content?.map(b=>b.text||"").join("")||"{}";
-    const clean = text.replace(/```json|```/g,"").trim();
-    return JSON.parse(clean);
-  } catch(e) {
-    // Fallback signal based on scorecard
-    const score = sig?.score || 50;
-    const action = score >= 65 ? "BUY" : score <= 40 ? "SELL" : "HOLD";
-    const confidence = Math.abs(score - 50) * 2;
-    const atr = instrument.price * 0.008;
-    return {
-      action, confidence,
-      contracts: confidence >= 85 ? 2 : 1,
-      stopLoss: action==="BUY" ? instrument.price - atr*2 : instrument.price + atr*2,
-      takeProfit: action==="BUY" ? instrument.price + atr*4 : instrument.price - atr*4,
-      riskPercent: 1.5,
-      reasoning: `Scorecard signal ${sig?.overall} with score ${score}/100. ${action==="HOLD"?"Waiting for stronger confluence.":"Signal strength sufficient to enter."}`,
-      timeframe: "medium",
-    };
-  }
+function FilterRow({ label, passed, detail }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.offwhite}` }}>
+      <span style={{ fontSize: 12, color: passed ? C.eucalyptus : C.negative }}>{passed ? "✓" : "✗"}</span>
+      <span style={{ flex: 1, fontSize: 11, fontFamily: "'DM Mono',monospace", color: C.charcoal }}>{label}</span>
+      {detail && <span style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>{detail}</span>}
+    </div>
+  );
+}
+
+function RegimeBadge({ regime }) {
+  const map = {
+    TRENDING_UP:   { color: C.eucalyptus, bg: C.eucalyptusPale, label: "↑ TRENDING UP" },
+    TRENDING_DOWN: { color: C.negative,   bg: C.negativePale,   label: "↓ TRENDING DOWN" },
+    RANGING:       { color: C.navy,       bg: C.navyPale,       label: "↔ RANGING" },
+    HIGH_VOL:      { color: C.warning,    bg: C.warningPale,    label: "⚡ HIGH VOL" },
+    LOW_VOL:       { color: C.wheatDark,  bg: C.wheatPale,      label: "— LOW VOL" },
+  };
+  const r = map[regime] || map.RANGING;
+  return <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", fontWeight: 700, color: r.color, background: r.bg, padding: "2px 7px", borderRadius: 3, letterSpacing: "0.05em" }}>{r.label}</span>;
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
-function generateLesson(scorecardData, signal, inst) {
-  if (!scorecardData) return "";
-  const vars = scorecardData.vars ?? {};
-  const bullish = Object.values(vars).filter(v=>v==="BULLISH").length;
-  const bearish = Object.values(vars).filter(v=>v==="BEARISH").length;
-  const bullVars = Object.entries(vars).filter(([,v])=>v==="BULLISH").map(([k])=>k.toUpperCase());
-  const bearVars = Object.entries(vars).filter(([,v])=>v==="BEARISH").map(([k])=>k.toUpperCase());
-
-  if (signal.action==="HOLD") {
-    if (bullish===bearish) return `This is a textbook mixed signal situation. With ${bullish} bullish and ${bearish} bearish factors, there is no clear edge. New traders often feel pressure to trade every instrument — but the highest-probability trades come from waiting for confluence. Patience is a position.`;
-    if (bullish > bearish) return `Despite a slight bullish lean (${bullVars.join(", ")}), the confidence threshold of 65% was not reached. The conflicting signals from ${bearVars.join(", ")} created enough uncertainty to justify staying flat. In commodity trading, a HOLD is not a missed opportunity — it is capital preservation.`;
-    return `Bearish signals from ${bearVars.join(", ")} dominate, but not enough to warrant a short position with high confidence. Commodity shorts require strong conviction because supply shocks can trigger violent counter-moves. Waiting for a cleaner setup is the professional approach.`;
-  }
-  if (signal.action==="BUY") {
-    return `A BUY signal with ${signal.confidence}% confidence was triggered by bullish alignment in ${bullVars.join(", ")}. Notice how multiple independent factors are pointing in the same direction — this is called confluence, and it is the foundation of high-probability commodity trading. The stop loss at ${signal.stopLoss?.toFixed(4)} defines your maximum risk before the thesis is invalidated.`;
-  }
-  return `A SELL signal with ${signal.confidence}% confidence was triggered by bearish pressure from ${bearVars.join(", ")}. Shorting commodities is inherently more dangerous than going long because supply disruptions (weather, policy) can cause sudden explosive rallies. Notice the tight stop placement — this reflects the asymmetric risk of short positions in physical commodities.`;
-}
-
 export default function AutoTrader() {
-  const [fundSize, setFundSize] = useState(10000);
-  const [pendingFundSize, setPendingFundSize] = useState(null);
-  const [signalLog, setSignalLog] = useState([]);
-
-  const INITIAL_CAPITAL = fundSize;
-
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isRunning, setIsRunning] = useState(false);
+  const [scanningSymbol, setScanningSymbol] = useState(null);
+  const [fundSize, setFundSize] = useState(10000);
+  const [pendingFund, setPendingFund] = useState("");
+  const [log, setLog] = useState([]);
+  const [selectedInst, setSelectedInst] = useState("ZW"); // for reasoning tab
+  const [ibkrMode, setIbkrMode] = useState("paper");
+  const [ibkrConfirmText, setIbkrConfirmText] = useState("");
+  const [ibkrShowConfirm, setIbkrShowConfirm] = useState(false);
+
+  const [prevScores, setPrevScores] = useState({});
+  const [attribution, setAttribution] = useState(
+    Object.fromEntries(Object.keys(WEIGHTS).map(k => [k, { correct: 0, total: 0 }]))
+  );
+
+  const initialCapital = fundSize;
+
   const [portfolio, setPortfolio] = useState({
-    cash: INITIAL_CAPITAL,
-    initialCapital: INITIAL_CAPITAL,
+    cash: initialCapital,
+    initialCapital,
     positions: [],
     closedTrades: [],
-    pnlHistory: [INITIAL_CAPITAL],
-    dailyLossLimit: INITIAL_CAPITAL * 0.05,
+    pnlHistory: [initialCapital],
     dailyLoss: 0,
+    weeklyLoss: 0,
     halted: false,
     haltReason: "",
-    lastSignalTime: null,
-    signalInterval: 30, // minutes
   });
-  const [scanningSymbol, setScanningSymbol] = useState(null);
-  const [lastScan, setLastScan] = useState(null);
-  const [log, setLog] = useState([]);
-  const [prices, setPrices] = useState(
-    Object.fromEntries(INSTRUMENTS.map(i => [i.symbol, {
-      current: i.price,
-      history: genPriceHistory(i.price),
-    }]))
-  );
-  const intervalRef = useRef(null);
 
-  // Simulate price movements
+  const [prices, setPrices] = useState(() =>
+    Object.fromEntries(INSTRUMENTS.map(i => [i.symbol, { current: i.price, history: genPriceHistory(i.price) }]))
+  );
+
+  const intervalRef = useRef(null);
+  const portfolioRef = useRef(portfolio);
+  const pricesRef = useRef(prices);
+  const prevScoresRef = useRef(prevScores);
+  const attributionRef = useRef(attribution);
+
+  useEffect(() => { portfolioRef.current = portfolio; }, [portfolio]);
+  useEffect(() => { pricesRef.current = prices; }, [prices]);
+  useEffect(() => { prevScoresRef.current = prevScores; }, [prevScores]);
+  useEffect(() => { attributionRef.current = attribution; }, [attribution]);
+
+  const addLog = useCallback((msg, type = "info") => {
+    setLog(prev => [{ msg, type, time: new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) }, ...prev.slice(0, 49)]);
+  }, []);
+
+  // ── Price tick ──────────────────────────────────────────────────────────────
   const tickPrices = useCallback(() => {
     setPrices(prev => {
-      const next = {...prev};
+      const next = { ...prev };
       Object.keys(next).forEach(sym => {
-        const inst = INSTRUMENTS.find(i=>i.symbol===sym);
+        const inst = INSTRUMENTS.find(i => i.symbol === sym);
         if (!inst) return;
-        const vol = inst.sector==="Currencies" ? 0.0003 : 0.004;
-        const change = (Math.random()-0.495) * vol;
-        const newPrice = parseFloat((next[sym].current * (1+change)).toFixed(4));
-        next[sym] = {
-          current: newPrice,
-          history: [...next[sym].history.slice(-29), newPrice],
-        };
+        const vol = inst.sector === "Currencies" ? 0.0003 : 0.004;
+        const change = (Math.random() - 0.495) * vol;
+        const newPrice = parseFloat((next[sym].current * (1 + change)).toFixed(4));
+        next[sym] = { current: newPrice, history: [...next[sym].history.slice(-29), newPrice] };
       });
       return next;
     });
   }, []);
 
-  // Update open position P&L
+  // ── Update P&L for open positions ───────────────────────────────────────────
   const updatePositionPnL = useCallback((pos, currentPrice) => {
-    const inst = INSTRUMENTS.find(i=>i.symbol===pos.symbol);
+    const inst = INSTRUMENTS.find(i => i.symbol === pos.symbol);
     if (!inst) return pos;
-    const priceDiff = pos.direction==="LONG"
-      ? currentPrice - pos.entryPrice
-      : pos.entryPrice - currentPrice;
-    const pnl = (priceDiff / (inst.tickSize)) * inst.tickValue * pos.contracts;
-    const pct = (pnl / (pos.entryPrice * inst.contractSize * pos.contracts / 100)) * 100;
-    return { ...pos, currentPrice, unrealisedPnL:pnl, pnlPct:pct };
+    const priceDiff = pos.direction === "LONG" ? currentPrice - pos.entryPrice : pos.entryPrice - currentPrice;
+    const pnl = (priceDiff / inst.tickSize) * inst.tickValue * pos.contracts;
+    const pnlPct = pos.entryValue > 0 ? (pnl / pos.entryValue) * 100 : 0;
+    const peakPnl = Math.max(pos.peakPnl || 0, pnl);
+    // Update trailing stop
+    let stopLoss = pos.stopLoss;
+    const atr = calcATR(pricesRef.current[pos.symbol]?.history || []);
+    const atrDollar = (atr / inst.tickSize) * inst.tickValue;
+    if (pnl >= atrDollar && !pos.movedToBreakeven) {
+      // Move to breakeven after 1×ATR profit
+      stopLoss = pos.entryPrice;
+    }
+    if (pnl >= atrDollar * 2) {
+      // Trail at 1.5×ATR from peak price
+      const peakPrice = pos.direction === "LONG"
+        ? pos.entryPrice + (peakPnl / pos.contracts / inst.tickValue) * inst.tickSize
+        : pos.entryPrice - (peakPnl / pos.contracts / inst.tickValue) * inst.tickSize;
+      stopLoss = pos.direction === "LONG"
+        ? Math.max(stopLoss, peakPrice - atr * 1.5)
+        : Math.min(stopLoss, peakPrice + atr * 1.5);
+    }
+    return {
+      ...pos, currentPrice, unrealisedPnL: pnl, pnlPct, peakPnl,
+      stopLoss, movedToBreakeven: pnl >= atrDollar || pos.movedToBreakeven,
+      daysOpen: (pos.daysOpen || 0),
+    };
   }, []);
 
-  // Check stop loss / take profit
-  const checkExits = useCallback((portfolio, prices) => {
-    let updated = {...portfolio};
+  // ── Check exits ─────────────────────────────────────────────────────────────
+  const processExits = useCallback((port, px) => {
+    let updated = { ...port, positions: [...port.positions], closedTrades: [...port.closedTrades] };
     const toClose = [];
+
     updated.positions = updated.positions.map(pos => {
-      const cur = prices[pos.symbol]?.current || pos.entryPrice;
+      const cur = px[pos.symbol]?.current || pos.entryPrice;
       const updPos = updatePositionPnL(pos, cur);
-      // Check SL/TP
-      if (pos.direction==="LONG") {
-        if (cur <= pos.stopLoss)  { toClose.push({...updPos, closeReason:"Stop Loss Hit ⛔"}); return null; }
-        if (cur >= pos.takeProfit){ toClose.push({...updPos, closeReason:"Take Profit Hit ✅"}); return null; }
-      } else {
-        if (cur >= pos.stopLoss)  { toClose.push({...updPos, closeReason:"Stop Loss Hit ⛔"}); return null; }
-        if (cur <= pos.takeProfit){ toClose.push({...updPos, closeReason:"Take Profit Hit ✅"}); return null; }
+
+      // Stop loss hit
+      const slHit = pos.direction === "LONG" ? cur <= updPos.stopLoss : cur >= updPos.stopLoss;
+      if (slHit) { toClose.push({ ...updPos, closeReason: "STOP LOSS" }); return null; }
+
+      // Take profit hit
+      const tpHit = pos.direction === "LONG" ? cur >= pos.takeProfit : cur <= pos.takeProfit;
+      if (tpHit) { toClose.push({ ...updPos, closeReason: "TAKE PROFIT" }); return null; }
+
+      // Partial exit: 50% at 2×ATR profit (once)
+      const inst = INSTRUMENTS.find(i => i.symbol === pos.symbol);
+      if (inst && !pos.partialDone && updPos.unrealisedPnL > 0) {
+        const atrDollar = calcATR(px[pos.symbol]?.history || []) / inst.tickSize * inst.tickValue;
+        if (updPos.unrealisedPnL >= atrDollar * 2 && pos.contracts > 1) {
+          const halfContracts = Math.floor(pos.contracts / 2);
+          const halfPnl = updPos.unrealisedPnL * (halfContracts / pos.contracts);
+          const closedHalf = { ...updPos, contracts: halfContracts, pnl: halfPnl, closeReason: "PARTIAL (2×ATR)" };
+          toClose.push(closedHalf);
+          return { ...updPos, contracts: pos.contracts - halfContracts, partialDone: true };
+        }
       }
+
+      // Time stop: 10 days unprofitable
+      if ((updPos.daysOpen || 0) >= 10 && updPos.unrealisedPnL < 0) {
+        toClose.push({ ...updPos, closeReason: "TIME STOP" }); return null;
+      }
+
+      // Signal invalidation: long score drops below 35, short rises above 65
+      const sigVars = SIGNAL_DATA[pos.symbol]?.vars || {};
+      const currentScore = computeWeightedScore(sigVars, prevScoresRef.current[pos.symbol]);
+      const invalidated = pos.direction === "LONG" ? currentScore < 35 : currentScore > 65;
+      if (invalidated) { toClose.push({ ...updPos, closeReason: "SIGNAL INVALIDATED" }); return null; }
+
       return updPos;
     }).filter(Boolean);
 
+    // Process closed positions
     toClose.forEach(pos => {
       const pnl = pos.unrealisedPnL || 0;
       updated.cash += pnl;
-      updated.dailyLoss += Math.min(0, pnl);
-      const closed = { ...pos, closedAt: new Date(), closePnL: pnl, closePrice: pos.currentPrice };
-      updated.closedTrades = [closed, ...updated.closedTrades];
-      const totalEquity = updated.cash + updated.positions.reduce((s,p)=>s+(p.unrealisedPnL||0),0);
-      updated.pnlHistory = [...updated.pnlHistory, totalEquity];
-      addLog(`${pos.closeReason} — ${pos.symbol} ${pos.direction} | P&L: ${pnl>=0?"+":""}$${pnl.toFixed(0)}`, pnl>=0?"success":"error");
+      updated.dailyLoss = (updated.dailyLoss || 0) + Math.min(0, pnl);
+      updated.weeklyLoss = (updated.weeklyLoss || 0) + Math.min(0, pnl);
+      const closedTrade = {
+        symbol: pos.symbol, name: pos.name, direction: pos.direction,
+        entryPrice: pos.entryPrice, exitPrice: pos.currentPrice,
+        contracts: pos.contracts, pnl, closeReason: pos.closeReason,
+        closedAt: new Date().toISOString(),
+      };
+      updated.closedTrades = [...updated.closedTrades, closedTrade];
+      // Attribution update
+      const sigVars = SIGNAL_DATA[pos.symbol]?.vars || {};
+      setAttribution(prev => updateAttribution(prev, closedTrade, sigVars));
     });
 
-    // Daily loss limit check
-    if (Math.abs(updated.dailyLoss) >= updated.dailyLossLimit && !updated.halted) {
-      updated.halted = true;
-      updated.haltReason = `Daily loss limit reached ($${Math.abs(updated.dailyLoss).toFixed(0)}). Trading halted for today.`;
-      addLog("🚨 DAILY LOSS LIMIT REACHED — Trading halted", "error");
+    // Update equity curve
+    const equity = updated.cash + updated.positions.reduce((s, p) => s + (p.unrealisedPnL || 0), 0);
+    updated.pnlHistory = [...(updated.pnlHistory || [initialCapital]), equity];
+
+    // Risk halts
+    if (!updated.halted) {
+      if ((updated.dailyLoss || 0) <= -(updated.initialCapital * 0.04)) {
+        updated.halted = true; updated.haltReason = "Daily loss limit (4%) breached";
+      } else if ((updated.weeklyLoss || 0) <= -(updated.initialCapital * 0.08)) {
+        updated.halted = true; updated.haltReason = "Weekly loss limit (8%) breached";
+      } else if ((updated.initialCapital - equity) / updated.initialCapital >= 0.15) {
+        updated.halted = true; updated.haltReason = "Drawdown halt (15%) triggered";
+      } else if (updated.closedTrades.slice(-4).length === 4 && updated.closedTrades.slice(-4).every(t => t.pnl < 0)) {
+        updated.halted = true; updated.haltReason = "Circuit breaker: 4 consecutive losses";
+      }
+    }
+
+    if (toClose.length > 0) {
+      toClose.forEach(pos => addLog(`CLOSED ${pos.symbol} ${pos.direction} — ${pos.closeReason} — P&L: $${(pos.unrealisedPnL || 0).toFixed(0)}`, pos.unrealisedPnL >= 0 ? "trade_win" : "trade_loss"));
     }
 
     return updated;
-  }, [updatePositionPnL]);
+  }, [updatePositionPnL, addLog, initialCapital]);
 
-  function addLog(message, type="info") {
-    setLog(prev => [{
-      id: Date.now(),
-      time: new Date().toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit",second:"2-digit"}),
-      message, type,
-    }, ...prev.slice(0,99)]);
-  }
+  // ── Scan instruments and generate signals ───────────────────────────────────
+  const runScan = useCallback(async () => {
+    const port = portfolioRef.current;
+    const px = pricesRef.current;
+    if (port.halted) { addLog("Trading halted: " + port.haltReason, "halt"); return; }
 
-  function logSignal(inst, signal, executed, currentPrice) {
-    setSignalLog(prev => [{
-      id: Date.now(),
-      timestamp: new Date(),
-      instrument: inst,
-      signal,
-      scorecardData: SIGNAL_DATA[inst.symbol],
-      executed,
-      entryPrice: currentPrice,
-      lesson: generateLesson(SIGNAL_DATA[inst.symbol], signal, inst),
-    }, ...prev.slice(0, 199)]);
-  }
+    const newPrevScores = { ...prevScoresRef.current };
 
-  // Price tick every 3 seconds when running
-  useEffect(() => {
-    if (isRunning) {
-      const tick = setInterval(tickPrices, 3000);
-      return () => clearInterval(tick);
-    }
-  }, [isRunning, tickPrices]);
-
-  // Check exits on price update
-  useEffect(() => {
-    if (isRunning && portfolio.positions.length > 0) {
-      setPortfolio(prev => checkExits(prev, prices));
-    }
-  }, [prices, isRunning, checkExits]);
-
-  // Auto scan every N minutes
-  useEffect(() => {
-    if (isRunning && !portfolio.halted) {
-      intervalRef.current = setInterval(() => {
-        runScan();
-      }, portfolio.signalInterval * 60 * 1000);
-      return () => clearInterval(intervalRef.current);
-    }
-  }, [isRunning, portfolio.halted]);
-
-  async function runScan() {
-    if (portfolio.halted) { addLog("Trading halted — scan skipped", "warning"); return; }
-    const openCount = portfolio.positions.length;
-    if (openCount >= 5) { addLog("Max positions (5) reached — scan skipped", "warning"); return; }
-    const totalEquity = portfolio.cash + portfolio.positions.reduce((s,p)=>s+(p.unrealisedPnL||0),0);
-
-    // Scan instruments with signal data
-    const toScan = INSTRUMENTS.filter(i => SIGNAL_DATA[i.symbol] && !portfolio.positions.find(p=>p.symbol===i.symbol));
-    addLog(`🔍 Scanning ${toScan.length} instruments...`, "info");
-
-    for (const inst of toScan.slice(0,6)) { // Limit API calls
+    for (const inst of INSTRUMENTS) {
       setScanningSymbol(inst.symbol);
-      const signal = await generateSignal(inst, totalEquity, openCount);
-      setScanningSymbol(null);
+      const sigData = SIGNAL_DATA[inst.symbol];
+      if (!sigData) continue;
+      const vars = sigData.vars || {};
+      const prevScore = newPrevScores[inst.symbol] ?? null;
+      const filters = checkEntryFilters(inst, vars, prevScore, port, px[inst.symbol]);
+      newPrevScores[inst.symbol] = filters.score;
 
-      if (signal.action === "HOLD" || signal.confidence < 65) {
-        addLog(`${inst.emoji} ${inst.symbol} — HOLD (confidence: ${signal.confidence}%)`, "info");
-        logSignal(inst, signal, false, prices[inst.symbol]?.current || inst.price);
-        continue;
-      }
+      if (!filters.passed) continue;
+      // Already in this instrument?
+      if (port.positions.some(p => p.symbol === inst.symbol)) continue;
 
-      // Execute trade
-      const currentPrice = prices[inst.symbol]?.current || inst.price;
-      const riskAmount = totalEquity * (signal.riskPercent / 100);
-      const contracts = Math.min(signal.contracts, Math.floor(totalEquity / (inst.margin * 2)));
-      if (contracts < 1) { addLog(`${inst.symbol} — Insufficient margin, skipping`, "warning"); continue; }
+      const atr = filters.atr;
+      const entryPrice = px[inst.symbol]?.current || inst.price;
+      const stopDist = atr * 2;
+      const stopLoss = filters.direction === "LONG" ? entryPrice - stopDist : entryPrice + stopDist;
+      const takeProfit = filters.direction === "LONG" ? entryPrice + atr * 4 : entryPrice - atr * 4;
 
-      const newPosition = {
-        id: Date.now(),
-        symbol: inst.symbol,
-        name: inst.name,
-        emoji: inst.emoji,
-        sector: inst.sector,
-        direction: signal.action,
-        contracts,
-        entryPrice: currentPrice,
-        currentPrice,
-        stopLoss: signal.stopLoss,
-        takeProfit: signal.takeProfit,
-        confidence: signal.confidence,
-        riskPercent: signal.riskPercent,
-        reasoning: signal.reasoning,
-        timeframe: signal.timeframe,
-        openedAt: new Date(),
-        unrealisedPnL: 0,
-        pnlPct: 0,
-        marginUsed: inst.margin * contracts,
+      // Kelly sizing
+      const riskPerContract = (stopDist / inst.tickSize) * inst.tickValue;
+      const contracts = computeKelly(port.closedTrades, port.initialCapital, riskPerContract);
+
+      const margin = inst.margin * contracts;
+      const entryValue = margin;
+
+      const position = {
+        symbol: inst.symbol, name: inst.name, emoji: inst.emoji, sector: inst.sector,
+        direction: filters.direction, entryPrice, currentPrice: entryPrice,
+        stopLoss, takeProfit, contracts, margin, entryValue,
+        unrealisedPnL: 0, pnlPct: 0, peakPnl: 0,
+        movedToBreakeven: false, partialDone: false, daysOpen: 0,
+        openedAt: new Date().toISOString(),
+        entryScore: filters.score, entryConfluence: filters.confluenceCount,
       };
 
       setPortfolio(prev => ({
         ...prev,
-        cash: prev.cash - inst.margin * contracts,
-        positions: [...prev.positions, newPosition],
-        lastSignalTime: new Date(),
+        cash: prev.cash - margin,
+        positions: [...prev.positions, position],
       }));
-      addLog(`✅ EXECUTED: ${signal.action} ${contracts}x ${inst.symbol} @ ${currentPrice.toFixed(4)} | SL: ${(signal.stopLoss??0).toFixed(4)} | TP: ${(signal.takeProfit??0).toFixed(4)} | Confidence: ${signal.confidence}%`, "success");
-      addLog(`   Reasoning: ${signal.reasoning}`, "reasoning");
-      logSignal(inst, signal, true, currentPrice);
-    }
-    setLastScan(new Date());
-  }
 
-  async function manualSignal(symbol) {
-    const inst = INSTRUMENTS.find(i=>i.symbol===symbol);
-    if (!inst) return;
-    setScanningSymbol(symbol);
-    const totalEquity = portfolio.cash + portfolio.positions.reduce((s,p)=>s+(p.unrealisedPnL||0),0);
-    const signal = await generateSignal(inst, totalEquity, portfolio.positions.length);
+      addLog(`OPEN ${inst.symbol} ${filters.direction} ×${contracts} @ ${entryPrice.toFixed(4)} | SL: ${stopLoss.toFixed(4)} | TP: ${takeProfit.toFixed(4)} | Score: ${Math.round(filters.score)}`, "trade_open");
+    }
+
+    setPrevScores(newPrevScores);
     setScanningSymbol(null);
-    addLog(`🔬 Manual signal for ${symbol}: ${signal.action} | Confidence: ${signal.confidence}% | ${signal.reasoning}`, signal.action==="BUY"?"success":signal.action==="SELL"?"error":"info");
+  }, [addLog]);
 
-    if (signal.action !== "HOLD" && signal.confidence >= 65 && !portfolio.positions.find(p=>p.symbol===symbol)) {
-      const currentPrice = prices[symbol]?.current || inst.price;
-      const contracts = Math.min(signal.contracts, Math.floor(totalEquity / (inst.margin * 2)));
-      if (contracts >= 1) {
-        setPortfolio(prev => ({
-          ...prev,
-          cash: prev.cash - inst.margin * contracts,
-          positions: [...prev.positions, {
-            id:Date.now(), symbol, name:inst.name, emoji:inst.emoji, sector:inst.sector,
-            direction:signal.action, contracts, entryPrice:currentPrice, currentPrice,
-            stopLoss:signal.stopLoss, takeProfit:signal.takeProfit,
-            confidence:signal.confidence, riskPercent:signal.riskPercent,
-            reasoning:signal.reasoning, timeframe:signal.timeframe,
-            openedAt:new Date(), unrealisedPnL:0, pnlPct:0, marginUsed:inst.margin*contracts,
-          }],
-        }));
-      }
-    }
-  }
+  // ── Main loop ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isRunning) { if (intervalRef.current) clearInterval(intervalRef.current); return; }
+    intervalRef.current = setInterval(() => {
+      tickPrices();
+      setPortfolio(prev => processExits(prev, pricesRef.current));
+    }, 2000);
+    const scanTimer = setInterval(runScan, 30000);
+    return () => { clearInterval(intervalRef.current); clearInterval(scanTimer); };
+  }, [isRunning, tickPrices, processExits, runScan]);
 
-  function closePosition(id) {
-    setPortfolio(prev => {
-      const pos = prev.positions.find(p=>p.id===id);
-      if (!pos) return prev;
-      const pnl = pos.unrealisedPnL || 0;
-      const totalEquity = prev.cash + pnl + prev.positions.filter(p=>p.id!==id).reduce((s,p)=>s+(p.unrealisedPnL||0),0);
-      addLog(`🔴 Manual close: ${pos.symbol} ${pos.direction} | P&L: ${pnl>=0?"+":""}$${pnl.toFixed(0)}`, pnl>=0?"success":"error");
-      return {
-        ...prev,
-        cash: prev.cash + pos.marginUsed + pnl,
-        positions: prev.positions.filter(p=>p.id!==id),
-        closedTrades: [{...pos, closedAt:new Date(), closePnL:pnl, closePrice:pos.currentPrice, closeReason:"Manual Close"}, ...prev.closedTrades],
-        pnlHistory: [...prev.pnlHistory, totalEquity],
-      };
-    });
-  }
-
-  function resetPortfolio(capital) {
-    const cap = capital ?? fundSize;
-    setPortfolio(prev => ({
-      cash:cap, initialCapital:cap, positions:[], closedTrades:[],
-      pnlHistory:[cap], dailyLossLimit:cap*0.05, dailyLoss:0,
-      halted:false, haltReason:"", lastSignalTime:null, signalInterval:prev.signalInterval||30,
-    }));
-    setLog([]);
-    setSignalLog([]);
+  const handleStart = () => {
+    if (portfolio.halted) { addLog("Cannot start — trading halted. Reset first.", "halt"); return; }
+    setIsRunning(true);
+    addLog("Auto-trader STARTED — scanning every 30s", "system");
+    runScan();
+  };
+  const handleStop = () => { setIsRunning(false); addLog("Auto-trader STOPPED", "system"); };
+  const handleReset = () => {
     setIsRunning(false);
-    addLog(`Portfolio reset to $${cap.toLocaleString()}`, "info");
-  }
+    setPortfolio({ cash: fundSize, initialCapital: fundSize, positions: [], closedTrades: [], pnlHistory: [fundSize], dailyLoss: 0, weeklyLoss: 0, halted: false, haltReason: "" });
+    setAttribution(Object.fromEntries(Object.keys(WEIGHTS).map(k => [k, { correct: 0, total: 0 }])));
+    setPrevScores({});
+    setLog([]);
+    addLog("Portfolio reset", "system");
+  };
 
-  // ─── COMPUTED STATS ─────────────────────────────────────────────────────────
-  const totalEquity = portfolio.cash + portfolio.positions.reduce((s,p)=>s+(p.unrealisedPnL||0),0);
-  const totalReturn = totalEquity - portfolio.initialCapital;
-  const returnPct = portfolio.initialCapital > 0 ? (totalReturn / portfolio.initialCapital) * 100 : 0;
-  const wins = portfolio.closedTrades.filter(t=>t.closePnL>0).length;
-  const losses = portfolio.closedTrades.filter(t=>t.closePnL<=0).length;
-  const winRate = portfolio.closedTrades.length > 0 ? (wins/portfolio.closedTrades.length*100) : 0;
-  const avgWin = wins > 0 ? portfolio.closedTrades.filter(t=>t.closePnL>0).reduce((s,t)=>s+t.closePnL,0)/wins : 0;
-  const avgLoss = losses > 0 ? Math.abs(portfolio.closedTrades.filter(t=>t.closePnL<=0).reduce((s,t)=>s+t.closePnL,0)/losses) : 0;
-  const profitFactor = avgLoss > 0 ? avgWin/avgLoss : avgWin > 0 ? 999 : 0;
-  const maxDrawdown = portfolio.pnlHistory.reduce((md, val, i, arr) => {
-    const peak = Math.max(...arr.slice(0,i+1));
-    return Math.max(md, (peak-val)/peak*100);
-  }, 0);
-  const marginUsed = portfolio.positions.reduce((s,p)=>s+p.marginUsed,0);
+  // ── Derived values ──────────────────────────────────────────────────────────
+  const equity = portfolio.cash + portfolio.positions.reduce((s, p) => s + (p.unrealisedPnL || 0), 0);
+  const totalPnL = equity - initialCapital;
+  const totalPnLPct = initialCapital > 0 ? (totalPnL / initialCapital) * 100 : 0;
+  const totalMarginUsed = portfolio.positions.reduce((s, p) => s + (p.margin || 0), 0);
+  const portfolioHeat = initialCapital > 0 ? (totalMarginUsed / initialCapital * 100).toFixed(1) : "0.0";
+  const stats = computeStats(portfolio.closedTrades, initialCapital);
 
   const TABS = [
-    { id:"dashboard", label:"DASHBOARD" },
-    { id:"positions", label:"POSITIONS" },
-    { id:"scanner",   label:"SCANNER"   },
-    { id:"history",   label:"TRADE LOG" },
-    { id:"reasoning", label:"REASONING" },
-    { id:"settings",  label:"SETTINGS"  },
+    { id: "dashboard", label: "DASHBOARD" },
+    { id: "scanner",   label: "SCANNER" },
+    { id: "reasoning", label: "REASONING" },
+    { id: "ibkr",      label: "IBKR" },
   ];
 
   return (
-    <div>
-      <style>{`
-        @keyframes spin { to{transform:rotate(360deg)} }
-        @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @keyframes scanPulse { 0%,100%{background:${C.warningPale}} 50%{background:#fff3cd} }
-      `}</style>
+    <div style={{ fontFamily: "'IBM Plex Sans',sans-serif", color: C.charcoal }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
 
       {/* Header */}
-      <div style={{background:`linear-gradient(135deg, ${C.charcoal} 0%, ${C.navy} 100%)`,borderRadius:6,padding:"18px 22px",marginBottom:18}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <span style={{fontSize:28}}>🤖</span>
-            <div>
-              <div style={{color:C.wheat,fontSize:18,fontWeight:700,fontFamily:"'DM Mono',monospace",letterSpacing:"0.12em"}}>AUTO TRADER</div>
-              <div style={{color:"rgba(255,255,255,0.55)",fontSize:11,fontFamily:"'DM Mono',monospace"}}>
-                Paper Trading Mode · ${fundSize.toLocaleString()} Fund · Claude Signal Engine
-              </div>
-            </div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            {portfolio.halted ? (
-              <div style={{background:"#3a0a0a",border:`1px solid ${C.negative}`,borderRadius:3,padding:"6px 14px"}}>
-                <span style={{color:C.negative,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>🚨 TRADING HALTED — {portfolio.haltReason}</span>
-              </div>
-            ) : (
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:isRunning?C.eucalyptus:C.lightGrey,animation:isRunning?"pulse 2s infinite":"none"}}/>
-                <span style={{color:isRunning?C.eucalyptus:C.lightGrey,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{isRunning?"LIVE — SCANNING MARKETS":"PAUSED"}</span>
-              </div>
-            )}
-            {!portfolio.halted && (
-              <Btn
-                onClick={()=>{
-                  setIsRunning(!isRunning);
-                  addLog(isRunning?"⏸ Trading paused":"▶ Trading started — scanning for signals", isRunning?"warning":"success");
-                  if (!isRunning) setTimeout(()=>runScan(), 1000);
-                }}
-                variant={isRunning?"red":"green"}
-                style={{padding:"8px 20px",fontSize:12}}
-              >
-                {isRunning?"⏸ PAUSE":"▶ START TRADING"}
-              </Btn>
-            )}
-            {portfolio.halted && <Btn onClick={()=>setPortfolio(p=>({...p,halted:false,haltReason:"",dailyLoss:0}))} variant="navy">RESET HALT</Btn>}
-          </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <span style={{ background: C.navy, color: C.white, padding: "5px 14px", borderRadius: 3, fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em" }}>AUTO TRADER</span>
+          <span style={{ marginLeft: 10, fontSize: 11, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>PAPER MODE · {INSTRUMENTS.length} instruments</span>
+          {portfolio.halted && <span style={{ marginLeft: 10, background: C.negativePale, color: C.negative, padding: "3px 8px", borderRadius: 3, fontSize: 10, fontFamily: "'DM Mono',monospace", fontWeight: 700 }}>HALTED: {portfolio.haltReason}</span>}
         </div>
-
-        {/* Key metrics */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(9,1fr)",gap:10}}>
-          {[
-            {l:"FUND SIZE",        v:`$${fundSize.toLocaleString()}`,         c:"rgba(255,255,255,0.55)"},
-            {l:"PORTFOLIO VALUE",  v:`$${totalEquity.toFixed(0)}`,            c:totalReturn>=0?C.wheat:"#f87171"},
-            {l:"TOTAL RETURN",     v:`${totalReturn>=0?"+":""}$${totalReturn.toFixed(0)}`, c:totalReturn>=0?"#7de8a0":"#f87171"},
-            {l:"RETURN %",         v:`${returnPct>=0?"+":""}${returnPct.toFixed(2)}%`,     c:totalReturn>=0?"#7de8a0":"#f87171"},
-            {l:"OPEN POSITIONS",   v:portfolio.positions.length,              c:C.wheat},
-            {l:"WIN RATE",         v:`${winRate.toFixed(0)}%`,                c:winRate>=50?"#7de8a0":"#f87171"},
-            {l:"PROFIT FACTOR",    v:profitFactor.toFixed(2),                 c:profitFactor>=1.5?"#7de8a0":profitFactor>=1?C.wheat:"#f87171"},
-            {l:"MAX DRAWDOWN",     v:`${maxDrawdown.toFixed(1)}%`,            c:maxDrawdown>10?"#f87171":C.wheat},
-            {l:"CASH AVAILABLE",   v:`$${portfolio.cash.toFixed(0)}`,         c:"rgba(255,255,255,0.7)"},
-          ].map((s,i)=>(
-            <div key={i}>
-              <div style={{color:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:3}}>{s.l}</div>
-              <div style={{color:s.c,fontSize:15,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{s.v}</div>
-            </div>
-          ))}
+        <div style={{ display: "flex", gap: 8 }}>
+          {!isRunning
+            ? <Btn onClick={handleStart} disabled={portfolio.halted}>▶ START</Btn>
+            : <Btn onClick={handleStop} variant="red">■ STOP</Btn>
+          }
+          <Btn onClick={handleReset} variant="outline">↺ RESET</Btn>
         </div>
       </div>
 
-      {/* Sub nav */}
-      <div style={{background:C.white,border:`1px solid ${C.lightGrey}`,borderRadius:4,padding:"4px 6px",marginBottom:18,display:"flex",gap:2}}>
-        {TABS.map(t=>(
-          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
-            background:activeTab===t.id?C.eggshell:"none",
-            border:`1px solid ${activeTab===t.id?C.lightGrey:"transparent"}`,
-            borderRadius:3,padding:"7px 16px",cursor:"pointer",
-            fontFamily:"'DM Mono',monospace",fontSize:10,fontWeight:activeTab===t.id?600:400,
-            letterSpacing:"0.08em",color:activeTab===t.id?C.eucalyptus:C.wheatDark,
-            transition:"all 0.15s",
-          }}>{t.label}</button>
+      {/* Equity bar */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
+        {[
+          { label: "EQUITY", value: `$${equity.toFixed(0)}`, sub: `${totalPnL >= 0 ? "+" : ""}${totalPnLPct.toFixed(2)}%`, color: totalPnL >= 0 ? C.eucalyptus : C.negative },
+          { label: "CASH", value: `$${portfolio.cash.toFixed(0)}`, sub: "available", color: C.navy },
+          { label: "OPEN POS.", value: portfolio.positions.length, sub: `${portfolioHeat}% heat`, color: C.wheat },
+          { label: "CLOSED", value: portfolio.closedTrades.length, sub: stats ? `${(stats.winRate * 100).toFixed(0)}% win rate` : "no trades", color: C.charcoal },
+        ].map((m, i) => (
+          <Card key={i} style={{ padding: "12px 16px" }}>
+            <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark, marginBottom: 4, letterSpacing: "0.1em" }}>{m.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: m.color, fontFamily: "'Lora',serif" }}>{m.value}</div>
+            <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>{m.sub}</div>
+          </Card>
         ))}
       </div>
 
-      {/* ─── DASHBOARD ─── */}
-      {activeTab==="dashboard" && (
-        <div style={{animation:"fadeIn 0.2s ease"}}>
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:18,marginBottom:18}}>
-            {/* P&L curve */}
-            <Card style={{padding:18}}>
-              <SectionHead label="PORTFOLIO P&L CURVE" sub={`${portfolio.pnlHistory.length-1} data points · Started at $${portfolio.initialCapital.toLocaleString()}`}/>
-              <PnLCurve history={portfolio.pnlHistory}/>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>Start</span>
-                <span style={{color:totalReturn>=0?C.eucalyptus:C.negative,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{totalReturn>=0?"+":""}${totalReturn.toFixed(0)} ({returnPct>=0?"+":""}{ returnPct.toFixed(2)}%)</span>
-                <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>Now</span>
-              </div>
+      {/* Tab nav */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: `2px solid ${C.lightGrey}`, paddingBottom: 0 }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ background: "none", border: "none", borderBottom: activeTab === t.id ? `2px solid ${C.eucalyptus}` : "2px solid transparent", padding: "8px 16px", cursor: "pointer", fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: activeTab === t.id ? C.eucalyptus : C.wheatDark, letterSpacing: "0.08em", marginBottom: -2 }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* ── DASHBOARD TAB ──────────────────────────────────────────────────────── */}
+      {activeTab === "dashboard" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, alignItems: "start" }}>
+          <div>
+            {/* P&L Curve */}
+            <Card style={{ padding: "16px 20px", marginBottom: 16 }}>
+              <SectionHead label="EQUITY CURVE" sub={`${portfolio.pnlHistory.length} data points · started at $${initialCapital.toLocaleString()}`} />
+              <PnLCurve history={portfolio.pnlHistory} />
             </Card>
 
-            {/* Stats */}
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <Card style={{padding:14}}>
-                <div style={{color:C.charcoal,fontSize:12,fontWeight:600,marginBottom:10}}>Performance Stats</div>
-                {[
-                  ["Total Trades",   portfolio.closedTrades.length, C.navy],
-                  ["Wins / Losses",  `${wins} / ${losses}`, wins>losses?C.eucalyptus:C.negative],
-                  ["Win Rate",       `${winRate.toFixed(1)}%`, winRate>=50?C.eucalyptus:C.negative],
-                  ["Avg Win",        `$${avgWin.toFixed(0)}`, C.eucalyptus],
-                  ["Avg Loss",       `-$${avgLoss.toFixed(0)}`, C.negative],
-                  ["Profit Factor",  profitFactor.toFixed(2), profitFactor>=1.5?C.eucalyptus:profitFactor>=1?C.warning:C.negative],
-                  ["Max Drawdown",   `${maxDrawdown.toFixed(1)}%`, maxDrawdown>10?C.negative:C.charcoal],
-                  ["Margin Used",    `$${marginUsed.toFixed(0)}`, C.charcoal],
-                ].map(([l,v,c])=>(
-                  <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.lightGrey}`}}>
-                    <span style={{color:C.charcoal,fontSize:11}}>{l}</span>
-                    <span style={{color:c,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</span>
+            {/* Performance stats */}
+            {stats && (
+              <Card style={{ padding: "16px 20px", marginBottom: 16 }}>
+                <SectionHead label="PERFORMANCE" />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
+                  {[
+                    { label: "Sharpe", value: stats.sharpe.toFixed(2), good: stats.sharpe > 1 },
+                    { label: "Sortino", value: stats.sortino.toFixed(2), good: stats.sortino > 1 },
+                    { label: "Expectancy", value: `$${stats.expectancy.toFixed(0)}`, good: stats.expectancy > 0 },
+                    { label: "Win Rate", value: `${(stats.winRate * 100).toFixed(0)}%`, good: stats.winRate >= 0.5 },
+                    { label: "Last 10", value: stats.winRate10 != null ? `${(stats.winRate10 * 100).toFixed(0)}%` : "—", good: (stats.winRate10 || 0) >= 0.5 },
+                    { label: "Last 20", value: stats.winRate20 != null ? `${(stats.winRate20 * 100).toFixed(0)}%` : "—", good: (stats.winRate20 || 0) >= 0.5 },
+                  ].map((s, i) => (
+                    <div key={i} style={{ textAlign: "center", padding: "10px", background: C.offwhite, borderRadius: 4 }}>
+                      <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark, marginBottom: 4 }}>{s.label}</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: s.good ? C.eucalyptus : C.negative, fontFamily: "'Lora',serif" }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+                {stats.best && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div style={{ padding: "8px 12px", background: C.eucalyptusPale, borderRadius: 4, borderLeft: `3px solid ${C.eucalyptus}` }}>
+                      <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.eucalyptus, marginBottom: 2 }}>BEST TRADE</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.eucalyptus }}>{stats.best.symbol} +${stats.best.pnl.toFixed(0)}</div>
+                    </div>
+                    <div style={{ padding: "8px 12px", background: C.negativePale, borderRadius: 4, borderLeft: `3px solid ${C.negative}` }}>
+                      <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.negative, marginBottom: 2 }}>WORST TRADE</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.negative }}>{stats.worst.symbol} ${stats.worst.pnl.toFixed(0)}</div>
+                    </div>
                   </div>
-                ))}
+                )}
               </Card>
-              <Card style={{padding:12,background:C.offwhite}}>
-                <div style={{color:C.charcoal,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:4}}>NEXT SCAN</div>
-                <div style={{color:C.charcoal,fontSize:12}}>{isRunning ? `Every ${portfolio.signalInterval} minutes` : "Paused — start trading to enable"}</div>
-                {lastScan && <div style={{color:C.wheatDark,fontSize:10,marginTop:3}}>Last scan: {lastScan.toLocaleTimeString("en-AU")}</div>}
-              </Card>
-            </div>
-          </div>
+            )}
 
-          {/* Open positions summary */}
-          <SectionHead label="OPEN POSITIONS" sub={`${portfolio.positions.length} open · Stops and targets active`}
-            action={portfolio.positions.length>0&&<Btn variant="outline" style={{fontSize:10,padding:"5px 12px"}} onClick={()=>setActiveTab("positions")}>View all →</Btn>}
-          />
-          {portfolio.positions.length===0 ? (
-            <Card style={{padding:30,textAlign:"center"}}>
-              <div style={{fontSize:28,marginBottom:8}}>📭</div>
-              <div style={{color:C.wheatDark,fontSize:13}}>{isRunning?"Scanning for opportunities...":"Start trading to begin scanning for signals"}</div>
-              {isRunning && scanningSymbol && <div style={{color:C.warning,fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:6,animation:"blink 1s infinite"}}>🔍 Analysing {scanningSymbol}...</div>}
-            </Card>
-          ) : (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10,alignItems:"stretch"}}>
-              {portfolio.positions.map(pos=>{
-                const up=pos.unrealisedPnL>=0;
-                const cur=prices[pos.symbol]?.current||pos.entryPrice;
-                const updPos=updatePositionPnL(pos,cur);
-                const slPct=Math.abs((pos.entryPrice-pos.stopLoss)/pos.entryPrice*100).toFixed(1);
-                const tpPct=Math.abs((pos.takeProfit-pos.entryPrice)/pos.entryPrice*100).toFixed(1);
-                return (
-                  <Card key={pos.id} style={{padding:14,borderLeft:`4px solid ${up?C.eucalyptus:C.negative}`,animation:"fadeIn 0.3s ease"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <span style={{fontSize:18}}>{pos.emoji}</span>
-                        <div>
-                          <div style={{color:C.charcoal,fontSize:13,fontWeight:700}}>{pos.symbol}</div>
-                          <span style={{fontSize:9,padding:"1px 5px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:600,color:C.white,background:pos.direction==="LONG"?C.eucalyptus:C.negative}}>{pos.direction}</span>
+            {/* Open positions */}
+            <Card style={{ padding: "16px 20px" }}>
+              <SectionHead label="OPEN POSITIONS" sub={`${portfolio.positions.length} active · ${portfolioHeat}% portfolio heat`} />
+              {portfolio.positions.length === 0
+                ? <div style={{ color: C.lightGrey, fontSize: 12, fontFamily: "'DM Mono',monospace", padding: "20px 0" }}>No open positions. {isRunning ? "Scanning for signals…" : "Start the engine to begin."}</div>
+                : portfolio.positions.map((pos, i) => {
+                  const pnlColor = (pos.unrealisedPnL || 0) >= 0 ? C.eucalyptus : C.negative;
+                  return (
+                    <div key={i} style={{ padding: "12px 0", borderBottom: i < portfolio.positions.length - 1 ? `1px solid ${C.offwhite}` : "none" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontSize: 16 }}>{pos.emoji}</span>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>{pos.name}</div>
+                            <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>{pos.symbol} · ×{pos.contracts} · {pos.direction}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: pnlColor }}>{(pos.unrealisedPnL || 0) >= 0 ? "+" : ""}${(pos.unrealisedPnL || 0).toFixed(0)}</div>
+                          <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: pnlColor }}>{(pos.pnlPct || 0) >= 0 ? "+" : ""}{(pos.pnlPct || 0).toFixed(2)}%</div>
                         </div>
                       </div>
-                      <div style={{textAlign:"right"}}>
-                        <div style={{color:up?C.eucalyptus:C.negative,fontSize:16,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{up?"+":"-"}${Math.abs(updPos.unrealisedPnL).toFixed(0)}</div>
-                        <div style={{color:up?C.eucalyptus:C.negative,fontSize:10,fontFamily:"'DM Mono',monospace"}}>{up?"+":""}{updPos.pnlPct?.toFixed(2)}%</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
+                        {[
+                          { label: "ENTRY", val: (pos.entryPrice || 0).toFixed(4) },
+                          { label: "CURRENT", val: (pos.currentPrice || 0).toFixed(4) },
+                          { label: "STOP", val: (pos.stopLoss || 0).toFixed(4) },
+                          { label: "TARGET", val: (pos.takeProfit || 0).toFixed(4) },
+                        ].map((f, j) => (
+                          <div key={j} style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.charcoal }}>
+                            <div style={{ color: C.wheatDark, marginBottom: 1 }}>{f.label}</div>
+                            {f.val}
+                          </div>
+                        ))}
                       </div>
+                      {pos.movedToBreakeven && <div style={{ marginTop: 4, fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.eucalyptus }}>★ Stop moved to breakeven</div>}
+                      {pos.partialDone && <div style={{ marginTop: 2, fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheat }}>½ Partial exit taken at 2×ATR</div>}
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:8}}>
-                      {[["ENTRY",pos.entryPrice.toFixed(4),C.charcoal],["CURRENT",cur.toFixed(4),up?C.eucalyptus:C.negative],["CONTRACTS",pos.contracts,C.navy]].map(([l,v,c])=>(
-                        <div key={l}><div style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:1}}>{l}</div><div style={{color:c,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</div></div>
-                      ))}
+                  );
+                })
+              }
+            </Card>
+          </div>
+
+          {/* Right column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 0, maxHeight: "calc(100vh - 160px)", overflowY: "auto" }}>
+            {/* Fund size */}
+            <Card style={{ padding: "14px 16px" }}>
+              <SectionHead label="FUND SIZE" />
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input value={pendingFund} onChange={e => setPendingFund(e.target.value)} placeholder={`$${fundSize.toLocaleString()}`} style={{ flex: 1, padding: "6px 10px", border: `1px solid ${C.lightGrey}`, borderRadius: 3, fontFamily: "'DM Mono',monospace", fontSize: 12 }} />
+                <Btn onClick={() => { const v = parseInt(pendingFund); if (v >= 1000) { setFundSize(v); setPendingFund(""); handleReset(); } }} variant="navy" style={{ padding: "6px 12px" }}>SET</Btn>
+              </div>
+              <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>Min $1,000 · resets portfolio</div>
+            </Card>
+
+            {/* Risk gauges */}
+            <Card style={{ padding: "14px 16px" }}>
+              <SectionHead label="RISK MONITOR" />
+              {[
+                { label: "Portfolio Heat", val: parseFloat(portfolioHeat), max: 25, unit: "%" },
+                { label: "Daily Loss", val: Math.abs(portfolio.dailyLoss || 0) / initialCapital * 100, max: 4, unit: "%" },
+                { label: "Weekly Loss", val: Math.abs(portfolio.weeklyLoss || 0) / initialCapital * 100, max: 8, unit: "%" },
+              ].map((g, i) => {
+                const pct = Math.min(100, (g.val / g.max) * 100);
+                const barColor = pct > 75 ? C.negative : pct > 50 ? C.warning : C.eucalyptus;
+                return (
+                  <div key={i} style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: C.charcoal }}>{g.label}</span>
+                      <span style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", fontWeight: 700, color: barColor }}>{g.val.toFixed(1)}{g.unit} / {g.max}{g.unit}</span>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
-                      <div style={{padding:"5px 8px",background:C.negativePale,borderRadius:2}}><div style={{color:C.negative,fontSize:9,fontFamily:"'DM Mono',monospace"}}>STOP LOSS</div><div style={{color:C.negative,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{pos.stopLoss.toFixed(4)} <span style={{opacity:0.7}}>(-{slPct}%)</span></div></div>
-                      <div style={{padding:"5px 8px",background:C.eucalyptusPale,borderRadius:2}}><div style={{color:C.eucalyptus,fontSize:9,fontFamily:"'DM Mono',monospace"}}>TAKE PROFIT</div><div style={{color:C.eucalyptus,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{pos.takeProfit.toFixed(4)} <span style={{opacity:0.7}}>(+{tpPct}%)</span></div></div>
+                    <div style={{ height: 6, background: C.lightGrey, borderRadius: 3 }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 3, transition: "width 0.3s" }} />
                     </div>
-                    <div style={{color:C.wheatDark,fontSize:10,lineHeight:1.4,marginBottom:8,fontStyle:"italic",fontFamily:"'Lora',serif"}}>"{pos.reasoning}"</div>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>Confidence: {pos.confidence}% · {pos.timeframe}</span>
-                      <Btn variant="outline" style={{fontSize:9,padding:"3px 8px"}} onClick={()=>closePosition(pos.id)}>Close</Btn>
-                    </div>
-                  </Card>
+                  </div>
                 );
               })}
-            </div>
-          )}
+            </Card>
 
-          {/* Recent log */}
-          <div style={{marginTop:20}}>
-            <SectionHead label="ACTIVITY LOG" sub="Last 10 events"/>
-            <Card style={{padding:14,fontFamily:"'DM Mono',monospace",fontSize:11}}>
-              {log.slice(0,10).map(l=>(
-                <div key={l.id} style={{padding:"4px 0",borderBottom:`1px solid ${C.lightGrey}`,display:"flex",gap:10,alignItems:"flex-start"}}>
-                  <span style={{color:C.lightGrey,flexShrink:0}}>{l.time}</span>
-                  <span style={{color:l.type==="success"?C.eucalyptus:l.type==="error"?C.negative:l.type==="warning"?C.warning:l.type==="reasoning"?C.wheatDark:C.charcoal,lineHeight:1.4}}>{l.message}</span>
-                </div>
-              ))}
-              {log.length===0&&<div style={{color:C.lightGrey,textAlign:"center",padding:"14px 0"}}>No activity yet — start trading to begin</div>}
+            {/* Activity log */}
+            <Card style={{ padding: "14px 16px", flex: 1 }}>
+              <SectionHead label="ACTIVITY LOG" />
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, display: "flex", flexDirection: "column", gap: 4, maxHeight: 260, overflowY: "auto" }}>
+                {log.length === 0 && <span style={{ color: C.lightGrey }}>No activity yet</span>}
+                {log.map((l, i) => {
+                  const color = l.type === "trade_win" ? C.eucalyptus : l.type === "trade_loss" ? C.negative : l.type === "trade_open" ? C.navy : l.type === "halt" ? C.warning : C.wheatDark;
+                  return <div key={i} style={{ color, lineHeight: 1.5 }}><span style={{ color: C.lightGrey }}>[{l.time}] </span>{l.msg}</div>;
+                })}
+              </div>
             </Card>
           </div>
         </div>
       )}
 
-      {/* ─── POSITIONS ─── */}
-      {activeTab==="positions" && (
-        <div style={{animation:"fadeIn 0.2s ease"}}>
-          <SectionHead label="OPEN POSITIONS" sub={`${portfolio.positions.length} positions · All stops active · Auto-closes on SL/TP hit`}/>
-          {portfolio.positions.length===0 ? (
-            <Card style={{padding:40,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>📭</div><div style={{color:C.wheatDark}}>No open positions</div></Card>
-          ) : (
-            portfolio.positions.map(pos=>{
-              const cur=prices[pos.symbol]?.current||pos.entryPrice;
-              const updPos=updatePositionPnL(pos,cur);
-              const up=updPos.unrealisedPnL>=0;
-              const hist=prices[pos.symbol]?.history||[];
-              return (
-                <Card key={pos.id} style={{padding:18,marginBottom:10,borderLeft:`4px solid ${up?C.eucalyptus:C.negative}`}}>
-                  <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto auto",gap:16,alignItems:"start"}}>
-                    <span style={{fontSize:28}}>{pos.emoji}</span>
-                    <div>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-                        <span style={{color:C.charcoal,fontSize:15,fontWeight:700}}>{pos.name}</span>
-                        <span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:600,color:C.white,background:pos.direction==="LONG"?C.eucalyptus:C.negative}}>{pos.direction}</span>
-                        <span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.navy,background:C.navyPale,border:`1px solid ${C.navy}22`}}>{pos.contracts} contract{pos.contracts>1?"s":""}</span>
-                        <span style={{fontSize:9,padding:"2px 7px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.eucalyptus,background:C.eucalyptusPale}}>Confidence: {pos.confidence}%</span>
-                        <span style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace"}}>{pos.openedAt?.toLocaleTimeString("en-AU")}</span>
-                      </div>
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(5,auto)",gap:"4px 20px",marginBottom:10}}>
-                        {[["ENTRY",pos.entryPrice.toFixed(4),C.charcoal],["CURRENT",cur.toFixed(4),up?C.eucalyptus:C.negative],["STOP",pos.stopLoss.toFixed(4),C.negative],["TARGET",pos.takeProfit.toFixed(4),C.eucalyptus],["MARGIN",`$${pos.marginUsed.toFixed(0)}`,C.navy]].map(([l,v,c])=>(
-                          <div key={l}><div style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:1}}>{l}</div><div style={{color:c,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</div></div>
-                        ))}
-                      </div>
-                      <div style={{color:C.charcoal,fontSize:12,fontStyle:"italic",padding:"6px 10px",background:C.eggshell,borderRadius:2,borderLeft:`2px solid ${C.wheat}`,marginBottom:8}}>"{pos.reasoning}"</div>
-                    </div>
-                    <Sparkline data={hist} color={up?C.eucalyptus:C.negative}/>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{color:up?C.eucalyptus:C.negative,fontSize:22,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{up?"+":"-"}${Math.abs(updPos.unrealisedPnL).toFixed(0)}</div>
-                      <div style={{color:up?C.eucalyptus:C.negative,fontSize:12,fontFamily:"'DM Mono',monospace",marginBottom:10}}>{up?"+":""}{updPos.pnlPct?.toFixed(2)}%</div>
-                      <Btn variant="red" style={{fontSize:10,padding:"5px 12px"}} onClick={()=>closePosition(pos.id)}>CLOSE POSITION</Btn>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })
-          )}
-        </div>
-      )}
+      {/* ── SCANNER TAB ─────────────────────────────────────────────────────────── */}
+      {activeTab === "scanner" && (
+        <div>
+          <SectionHead label="SIGNAL SCANNER" sub="Weighted scoring across 6 variables · Regime detection · Entry filter summary" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
+            {INSTRUMENTS.map(inst => {
+              const sigData = SIGNAL_DATA[inst.symbol];
+              const vars = sigData?.vars || {};
+              const prevScore = prevScores[inst.symbol] ?? null;
+              const score = computeWeightedScore(vars, prevScore);
+              const priceData = prices[inst.symbol];
+              const filters = checkEntryFilters(inst, vars, prevScore, portfolio, priceData);
+              const regime = detectRegime(priceData?.history || []);
+              const isScanning = scanningSymbol === inst.symbol;
+              const hasPosition = portfolio.positions.some(p => p.symbol === inst.symbol);
+              const dir = score > 60 ? "BULLISH" : score < 40 ? "BEARISH" : "NEUTRAL";
+              const dirColor = dir === "BULLISH" ? C.eucalyptus : dir === "BEARISH" ? C.negative : C.warning;
+              const borderColor = hasPosition ? C.wheat : filters.passed ? C.eucalyptus : C.lightGrey;
 
-      {/* ─── SCANNER ─── */}
-      {activeTab==="scanner" && (
-        <div style={{animation:"fadeIn 0.2s ease"}}>
-          <SectionHead label="MARKET SCANNER" sub="Claude analyses each instrument and generates BUY/SELL/HOLD signals with confidence scores"
-            action={<Btn onClick={runScan} disabled={!!scanningSymbol||portfolio.halted} style={{padding:"7px 14px"}}>{scanningSymbol?<><Spinner/>SCANNING {scanningSymbol}...</>:"🔍 RUN FULL SCAN"}</Btn>}
-          />
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10,marginBottom:16,alignItems:"stretch"}}>
-            {INSTRUMENTS.map(inst=>{
-              const sig=SIGNAL_DATA[inst.symbol];
-              const cur=prices[inst.symbol]?.current||inst.price;
-              const up=cur>=inst.price;
-              const isOpen=portfolio.positions.find(p=>p.symbol===inst.symbol);
-              const isScanning=scanningSymbol===inst.symbol;
-              const sectorColors={Grains:C.eucalyptus,Livestock:C.navy,Softs:C.wheat,Inputs:C.warning,Currencies:C.navyLight,Energy:C.wheatDark};
               return (
-                <Card key={inst.symbol} style={{padding:14,animation:isScanning?"scanPulse 0.8s infinite":undefined,border:`1px solid ${isOpen?C.eucalyptus:C.lightGrey}`,borderTop:`3px solid ${sectorColors[inst.sector]||C.lightGrey}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:16}}>{inst.emoji}</span><div><div style={{color:C.charcoal,fontSize:12,fontWeight:700}}>{inst.symbol}</div><div style={{color:C.wheatDark,fontSize:9}}>{inst.sector}</div></div></div>
-                    {sig ? <span style={{fontSize:9,padding:"2px 6px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:sig.overall==="BULLISH"?C.eucalyptus:sig.overall==="BEARISH"?C.negative:C.warning,background:sig.overall==="BULLISH"?C.eucalyptusPale:sig.overall==="BEARISH"?C.negativePale:C.warningPale}}>{sig.overall}</span> : <span style={{color:C.lightGrey,fontSize:9}}>—</span>}
+                <Card key={inst.symbol} style={{ padding: "14px 16px", borderLeft: `3px solid ${borderColor}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 18 }}>{inst.emoji}</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>{inst.name} <span style={{ fontSize: 10, color: C.wheatDark, fontFamily: "'DM Mono',monospace" }}>({inst.symbol})</span></div>
+                        <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>{inst.sector}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: dirColor, fontFamily: "'DM Mono',monospace" }}>{Math.round(score)}</span>
+                      <RegimeBadge regime={regime} />
+                    </div>
                   </div>
-                  <div style={{color:C.navy,fontSize:16,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:2}}>{cur.toFixed(inst.symbol==="6A"||inst.symbol==="6B"||inst.symbol==="DX"?4:2)}</div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                    <span style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace"}}>{inst.unit}</span>
-                    {sig && <div style={{height:3,width:60,background:C.lightGrey,borderRadius:2}}><div style={{height:"100%",width:`${sig.score}%`,background:sig.score>=65?C.eucalyptus:sig.score>=45?C.warning:C.negative,borderRadius:2}}/></div>}
+
+                  {/* Mini score bars */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px", marginBottom: 8 }}>
+                    {Object.keys(WEIGHTS).map(k => {
+                      const s = vars[k] ?? 50;
+                      const c = s > 60 ? C.eucalyptus : s < 40 ? C.negative : C.warning;
+                      return (
+                        <div key={k} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark, width: 52, flexShrink: 0 }}>{VAR_LABELS[k]}</span>
+                          <div style={{ flex: 1, height: 4, background: C.lightGrey, borderRadius: 2 }}>
+                            <div style={{ height: "100%", width: `${s}%`, background: c, borderRadius: 2 }} />
+                          </div>
+                          <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: c, width: 20, textAlign: "right" }}>{Math.round(s)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {isOpen ? (
-                    <div style={{padding:"4px 8px",background:C.eucalyptusPale,borderRadius:2,fontSize:10,color:C.eucalyptus,fontFamily:"'DM Mono',monospace",fontWeight:600}}>POSITION OPEN</div>
-                  ) : (
-                    <Btn variant="outline" style={{fontSize:10,padding:"5px 10px",width:"100%"}} onClick={()=>manualSignal(inst.symbol)} disabled={isScanning}>
-                      {isScanning?<><Spinner/>Analysing...</>:"◆ Get Signal"}
-                    </Btn>
-                  )}
+
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", fontWeight: 700, color: dirColor, background: dir === "BULLISH" ? C.eucalyptusPale : dir === "BEARISH" ? C.negativePale : C.warningPale, padding: "2px 7px", borderRadius: 3 }}>{dir}</span>
+                    <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>C:{filters.confluenceCount}/6</span>
+                    <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>${(priceData?.current || inst.price).toFixed(3)}</span>
+                    {hasPosition && <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheat, fontWeight: 700 }}>IN POSITION</span>}
+                    {filters.passed && !hasPosition && <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.eucalyptus, fontWeight: 700 }}>★ SIGNAL</span>}
+                    {isScanning && <span style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.navy, animation: "pulse 1s infinite" }}>SCANNING…</span>}
+                  </div>
                 </Card>
               );
             })}
@@ -800,274 +845,238 @@ export default function AutoTrader() {
         </div>
       )}
 
-      {/* ─── TRADE LOG ─── */}
-      {activeTab==="history" && (
-        <div style={{animation:"fadeIn 0.2s ease"}}>
-          <SectionHead label="TRADE LOG" sub={`${portfolio.closedTrades.length} closed trades · Win rate: ${winRate.toFixed(1)}% · Profit factor: ${profitFactor.toFixed(2)}`}/>
-          {portfolio.closedTrades.length===0 ? (
-            <Card style={{padding:40,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>📋</div><div style={{color:C.wheatDark}}>No closed trades yet</div></Card>
-          ) : (
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {portfolio.closedTrades.map(t=>{
-                const win=t.closePnL>0;
-                return (
-                  <Card key={t.id} style={{padding:"12px 16px",borderLeft:`4px solid ${win?C.eucalyptus:C.negative}`,display:"flex",alignItems:"center",gap:14}}>
-                    <span style={{fontSize:20,flexShrink:0}}>{t.emoji}</span>
-                    <div style={{flex:1}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
-                        <span style={{color:C.charcoal,fontSize:13,fontWeight:700}}>{t.name}</span>
-                        <span style={{fontSize:9,padding:"1px 5px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:600,color:C.white,background:t.direction==="LONG"?C.eucalyptus:C.negative}}>{t.direction}</span>
-                        <span style={{fontSize:9,padding:"1px 5px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:win?C.eucalyptus:C.negative,background:win?C.eucalyptusPale:C.negativePale}}>{t.closeReason}</span>
-                        <span style={{color:C.lightGrey,fontSize:10,fontFamily:"'DM Mono',monospace"}}>{t.closedAt?.toLocaleDateString("en-AU")}</span>
+      {/* ── REASONING TAB ───────────────────────────────────────────────────────── */}
+      {activeTab === "reasoning" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "start" }}>
+          <div>
+            <SectionHead label="SIGNAL REASONING" sub="Full variable breakdown · Entry filter results · Kelly sizing · Attribution" />
+
+            {/* Instrument picker */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+              {INSTRUMENTS.map(i => (
+                <button key={i.symbol} onClick={() => setSelectedInst(i.symbol)}
+                  style={{ background: selectedInst === i.symbol ? C.navy : C.offwhite, color: selectedInst === i.symbol ? C.white : C.charcoal, border: `1px solid ${selectedInst === i.symbol ? C.navy : C.lightGrey}`, borderRadius: 3, padding: "5px 10px", cursor: "pointer", fontFamily: "'DM Mono',monospace", fontSize: 10, fontWeight: 700 }}>
+                  {i.emoji} {i.symbol}
+                </button>
+              ))}
+            </div>
+
+            {(() => {
+              const inst = INSTRUMENTS.find(i => i.symbol === selectedInst);
+              if (!inst) return null;
+              const sigData = SIGNAL_DATA[inst.symbol];
+              const vars = sigData?.vars || {};
+              const prevScore = prevScores[inst.symbol] ?? null;
+              const priceData = prices[inst.symbol];
+              const filters = checkEntryFilters(inst, vars, prevScore, portfolio, priceData);
+              const { score, atr, dma10, regime, confluenceCount, direction } = filters;
+              const riskPerContract = (atr * 2 / inst.tickSize) * inst.tickValue;
+              const kellyContracts = computeKelly(portfolio.closedTrades, portfolio.initialCapital, riskPerContract);
+              const currentPrice = priceData?.current || inst.price;
+
+              return (
+                <div>
+                  {/* Score header */}
+                  <Card style={{ padding: "16px 20px", marginBottom: 16, borderLeft: `4px solid ${score > 60 ? C.eucalyptus : score < 40 ? C.negative : C.warning}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 700 }}>{inst.emoji} {inst.name}</div>
+                        <div style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>{currentPrice.toFixed(4)} {inst.unit} · {inst.sector}</div>
                       </div>
-                      <div style={{display:"flex",gap:14}}>
-                        {[["Entry",t.entryPrice?.toFixed(4)],["Exit",t.closePrice?.toFixed(4)],["Contracts",t.contracts],["Confidence",`${t.confidence}%`]].map(([l,v])=>(
-                          <div key={l}><span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>{l}: </span><span style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:500}}>{v}</span></div>
-                        ))}
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: score > 60 ? C.eucalyptus : score < 40 ? C.negative : C.warning, fontFamily: "'Lora',serif", lineHeight: 1 }}>{Math.round(score)}</div>
+                        <div style={{ fontSize: 10, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>WEIGHTED SCORE</div>
+                        <div style={{ marginTop: 4 }}><RegimeBadge regime={regime} /></div>
                       </div>
-                      {t.reasoning&&<div style={{color:C.wheatDark,fontSize:10,fontStyle:"italic",marginTop:4}}>"{t.reasoning}"</div>}
                     </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{color:win?C.eucalyptus:C.negative,fontSize:18,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{win?"+":"-"}${Math.abs(t.closePnL).toFixed(0)}</div>
+
+                    {/* Variable bars */}
+                    {Object.entries(WEIGHTS).map(([k, w]) => (
+                      <ScoreBar key={k} label={VAR_LABELS[k]} score={vars[k] ?? 50} weight={w} />
+                    ))}
+
+                    <div style={{ marginTop: 8, padding: "8px 12px", background: C.offwhite, borderRadius: 3 }}>
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: C.navy }}>
+                        CONFLUENCE: {confluenceCount}/6 variables aligned · Direction: {direction} · Score threshold: {filters.scoreThreshold}
+                      </span>
                     </div>
                   </Card>
+
+                  {/* Entry filters */}
+                  <Card style={{ padding: "16px 20px", marginBottom: 16 }}>
+                    <SectionHead label="ENTRY FILTER RESULTS" />
+                    <FilterRow label={`Score threshold (≥${filters.scoreThreshold})`} passed={filters.scoreOk} detail={`score=${Math.round(score)}`} />
+                    <FilterRow label="10-DMA alignment" passed={filters.dmaOk} detail={`price=${currentPrice.toFixed(3)} dma=${dma10.toFixed(3)}`} />
+                    <FilterRow label="Volatility regime (not LOW_VOL)" passed={filters.atrOk} detail={regime} />
+                    <FilterRow label="Confluence (≥4/6 aligned)" passed={filters.confluenceOk} detail={`${confluenceCount}/6`} />
+                    <FilterRow label="Portfolio heat (<25%)" passed={filters.heatOk} detail={`${(filters.portfolioHeat * 100).toFixed(1)}%`} />
+                    <FilterRow label="Sector concentration (<35%)" passed={filters.sectorOk} detail={`${(filters.sectorHeat * 100).toFixed(1)}%`} />
+                    <FilterRow label="Margin cap (<8% equity)" passed={filters.marginCapOk} detail={`$${inst.margin}`} />
+                    <FilterRow label="Risk circuit breakers clear" passed={filters.riskOk} detail={filters.reasons.consecLosses ? "4 consec losses" : filters.reasons.drawdownOk ? "" : "drawdown>15%"} />
+                    <div style={{ marginTop: 12, padding: "10px 12px", background: filters.passed ? C.eucalyptusPale : C.negativePale, borderRadius: 3 }}>
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: filters.passed ? C.eucalyptus : C.negative }}>
+                        {filters.passed ? `✓ SIGNAL PASSES ALL FILTERS — ${direction} ${kellyContracts} contract(s)` : "✗ SIGNAL BLOCKED — entry filters not met"}
+                      </span>
+                    </div>
+                  </Card>
+
+                  {/* Kelly + ATR calc */}
+                  <Card style={{ padding: "16px 20px", marginBottom: 16 }}>
+                    <SectionHead label="POSITION SIZING" sub="Half-Kelly · ATR-based stops" />
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+                      {[
+                        { label: "ATR (14)", val: atr.toFixed(4), unit: inst.unit },
+                        { label: "2×ATR Stop", val: (atr * 2).toFixed(4), unit: inst.unit },
+                        { label: "4×ATR Target", val: (atr * 4).toFixed(4), unit: inst.unit },
+                        { label: "Risk/Contract", val: `$${riskPerContract.toFixed(0)}`, unit: "" },
+                        { label: "Kelly Contracts", val: kellyContracts, unit: "" },
+                        { label: "Margin Required", val: `$${(inst.margin * kellyContracts).toFixed(0)}`, unit: "" },
+                      ].map((f, i) => (
+                        <div key={i} style={{ padding: "10px", background: C.offwhite, borderRadius: 3, textAlign: "center" }}>
+                          <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark, marginBottom: 4 }}>{f.label}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Lora',serif", color: C.navy }}>{f.val} <span style={{ fontSize: 10 }}>{f.unit}</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Attribution sidebar */}
+          <div style={{ position: "sticky", top: 0 }}>
+            <Card style={{ padding: "16px 20px" }}>
+              <SectionHead label="SIGNAL ACCURACY" sub="Per-variable attribution from closed trades" />
+              {Object.keys(WEIGHTS).map(k => {
+                const attr = attribution[k] || { correct: 0, total: 0 };
+                const acc = attr.total > 0 ? (attr.correct / attr.total * 100) : null;
+                const barColor = acc == null ? C.lightGrey : acc >= 60 ? C.eucalyptus : acc >= 45 ? C.warning : C.negative;
+                return (
+                  <div key={k} style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: C.charcoal, fontWeight: 600 }}>{VAR_LABELS[k]}</span>
+                      <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", fontWeight: 700, color: barColor }}>
+                        {acc != null ? `${acc.toFixed(0)}%` : "—"} <span style={{ fontSize: 9, fontWeight: 400, color: C.wheatDark }}>({attr.correct}/{attr.total})</span>
+                      </span>
+                    </div>
+                    <div style={{ height: 5, background: C.lightGrey, borderRadius: 3 }}>
+                      <div style={{ height: "100%", width: `${acc ?? 0}%`, background: barColor, borderRadius: 3 }} />
+                    </div>
+                  </div>
                 );
               })}
-            </div>
-          )}
-          <div style={{marginTop:20}}>
-            <SectionHead label="FULL ACTIVITY LOG" sub="All system events"/>
-            <Card style={{padding:14,maxHeight:400,overflowY:"auto",fontFamily:"'DM Mono',monospace",fontSize:11}}>
-              {log.map(l=>(
-                <div key={l.id} style={{padding:"3px 0",borderBottom:`1px solid ${C.lightGrey}`,display:"flex",gap:10}}>
-                  <span style={{color:C.lightGrey,flexShrink:0,width:56}}>{l.time}</span>
-                  <span style={{color:l.type==="success"?C.eucalyptus:l.type==="error"?C.negative:l.type==="warning"?C.warning:l.type==="reasoning"?C.wheatDark:C.charcoal}}>{l.message}</span>
-                </div>
-              ))}
+              <div style={{ marginTop: 8, padding: "8px 10px", background: C.offwhite, borderRadius: 3, fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>
+                Accuracy updates as trades close. Variables with {"<"}45% accuracy may warrant weight review.
+              </div>
             </Card>
+
+            {/* Closed trades */}
+            {portfolio.closedTrades.length > 0 && (
+              <Card style={{ padding: "14px 16px", marginTop: 16 }}>
+                <SectionHead label="RECENT CLOSES" />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {portfolio.closedTrades.slice(-8).reverse().map((t, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.offwhite}` }}>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700 }}>{t.symbol} <span style={{ fontSize: 9, color: C.wheatDark, fontFamily: "'DM Mono',monospace" }}>{t.direction}</span></div>
+                        <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>{t.closeReason}</div>
+                      </div>
+                      <div style={{ textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: t.pnl >= 0 ? C.eucalyptus : C.negative }}>
+                        {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(0)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       )}
 
-      {/* ─── REASONING CENTRE ─── */}
-      {activeTab==="reasoning" && (
-        <div style={{animation:"fadeIn 0.2s ease"}}>
-          <SectionHead label="REASONING CENTRE" sub={`${signalLog.length} signals logged · Every Claude decision explained`}/>
-          {signalLog.length===0 ? (
-            <Card style={{padding:40,textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:10}}>🧠</div>
-              <div style={{color:C.wheatDark,fontSize:13,fontFamily:"'Lora',serif",lineHeight:1.6}}>No signals yet. Start the Auto Trader or run a manual signal from the Scanner tab — every signal Claude generates will appear here with a full breakdown and trading lesson.</div>
-            </Card>
-          ) : (
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              {signalLog.map(entry=>{
-                const sig = entry.signal;
-                const sd = entry.scorecardData;
-                const inst = entry.instrument;
-                const actionColor = sig.action==="BUY"?C.eucalyptus:sig.action==="SELL"?C.negative:C.wheatDark;
-                const varColor = v=>v==="BULLISH"?C.eucalyptus:v==="BEARISH"?C.negative:C.lightGrey;
-                const varBg = v=>v==="BULLISH"?C.eucalyptusPale:v==="BEARISH"?C.negativePale:C.offwhite;
-                return (
-                  <Card key={entry.id} style={{padding:0,overflow:"hidden",borderLeft:`4px solid ${actionColor}`}}>
-                    {/* Signal header */}
-                    <div style={{background:C.offwhite,padding:"14px 20px",borderBottom:`1px solid ${C.lightGrey}`,display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-                      <span style={{fontSize:24}}>{inst.emoji}</span>
-                      <div style={{flex:1}}>
-                        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:4}}>
-                          <span style={{color:C.charcoal,fontSize:15,fontWeight:700}}>{inst.name}</span>
-                          <span style={{fontSize:10,padding:"3px 8px",borderRadius:2,fontFamily:"'DM Mono',monospace",fontWeight:700,color:C.white,background:actionColor,letterSpacing:"0.08em"}}>{sig.action}</span>
-                          {entry.executed&&<span style={{fontSize:9,padding:"2px 6px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.eucalyptus,background:C.eucalyptusPale,fontWeight:600}}>EXECUTED</span>}
-                          {!entry.executed&&sig.action!=="HOLD"&&<span style={{fontSize:9,padding:"2px 6px",borderRadius:2,fontFamily:"'DM Mono',monospace",color:C.warning,background:C.warningPale,fontWeight:600}}>LOW CONFIDENCE</span>}
-                          <span style={{color:C.lightGrey,fontSize:10,fontFamily:"'DM Mono',monospace"}}>{entry.timestamp.toLocaleString("en-AU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
-                        </div>
-                        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-                          {[["SYMBOL",inst.symbol],["SECTOR",inst.sector],["PRICE",entry.entryPrice?.toFixed(4)],["CONFIDENCE",`${sig.confidence}%`],["TIMEFRAME",(sig.timeframe||"").toUpperCase()]].map(([l,v])=>(
-                            <div key={l}><span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>{l} </span><span style={{color:C.navy,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</span></div>
-                          ))}
-                        </div>
-                      </div>
-                      {/* Confidence bar */}
-                      <div style={{textAlign:"center",minWidth:60}}>
-                        <div style={{color:actionColor,fontSize:22,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{sig.confidence}%</div>
-                        <div style={{width:60,height:4,background:C.lightGrey,borderRadius:2,marginTop:4}}>
-                          <div style={{width:`${sig.confidence}%`,height:"100%",background:actionColor,borderRadius:2}}/>
-                        </div>
-                        <div style={{color:C.lightGrey,fontSize:8,fontFamily:"'DM Mono',monospace",marginTop:3}}>CONFIDENCE</div>
-                      </div>
-                    </div>
+      {/* ── IBKR INTEGRATION TAB ────────────────────────────────────────────────── */}
+      {activeTab === "ibkr" && (
+        <div style={{ maxWidth: 640 }}>
+          <SectionHead label="IBKR INTEGRATION" sub="Interactive Brokers TWS / IB Gateway connection" />
 
-                    <div style={{padding:"18px 20px"}}>
-                      {/* Scorecard variables */}
-                      <div style={{marginBottom:18}}>
-                        <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:10}}>SCORECARD BREAKDOWN — {sd?.score||"?"}/100 OVERALL</div>
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8}}>
-                          {sd && Object.entries(sd.vars).map(([key,val])=>(
-                            <div key={key} style={{background:varBg(val),border:`1px solid ${varColor(val)}33`,borderRadius:3,padding:"8px 10px",textAlign:"center"}}>
-                              <div style={{color:C.charcoal,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:5,letterSpacing:"0.06em"}}>{key.toUpperCase()}</div>
-                              <div style={{color:varColor(val),fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{val}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Risk parameters (executed trades) */}
-                      {sig.action!=="HOLD" && (
-                        <div style={{marginBottom:18,padding:"12px 14px",background:C.offwhite,borderRadius:3,border:`1px solid ${C.lightGrey}`}}>
-                          <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:10}}>RISK PARAMETERS</div>
-                          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
-                            {[["ENTRY",entry.entryPrice?.toFixed(4),C.charcoal],["STOP LOSS",sig.stopLoss?.toFixed(4),C.negative],["TAKE PROFIT",sig.takeProfit?.toFixed(4),C.eucalyptus],["RISK %",`${sig.riskPercent?.toFixed(1)}%`,C.warning],["CONTRACTS",sig.contracts,C.navy]].map(([l,v,c])=>(
-                              <div key={l}><div style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace",marginBottom:3}}>{l}</div><div style={{color:c,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{v}</div></div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Claude's reasoning */}
-                      <div style={{marginBottom:16}}>
-                        <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:8}}>◆ CLAUDE'S REASONING</div>
-                        <div style={{color:C.charcoal,fontSize:13,lineHeight:1.75,fontFamily:"'Lora',serif",padding:"12px 16px",background:C.navyPale,borderRadius:3,borderLeft:`3px solid ${C.navy}`}}>{sig.reasoning}</div>
-                      </div>
-
-                      {/* What would change the signal */}
-                      {sig.action==="HOLD" && (
-                        <div style={{marginBottom:16,padding:"10px 14px",background:C.wheatPale,borderRadius:3,border:`1px solid ${C.wheat}44`}}>
-                          <div style={{color:C.wheatDark,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:600,letterSpacing:"0.12em",marginBottom:6}}>WHAT WOULD TRIGGER AN ENTRY?</div>
-                          <div style={{color:C.charcoal,fontSize:12,fontFamily:"'Lora',serif",lineHeight:1.65}}>
-                            {sd && (() => {
-                              const bearVars = Object.entries(sd.vars).filter(([,v])=>v==="BEARISH").map(([k])=>k);
-                              const neutralVars = Object.entries(sd.vars).filter(([,v])=>v==="NEUTRAL").map(([k])=>k);
-                              if (bearVars.length > 0) return `A shift in ${bearVars.map(v=>v.toUpperCase()).join(" or ")} from BEARISH to BULLISH or NEUTRAL would improve confluence and potentially push confidence above the 65% entry threshold.`;
-                              if (neutralVars.length > 0) return `If ${neutralVars.map(v=>v.toUpperCase()).join(" or ")} turned BULLISH, the scorecard would show stronger directional alignment and a BUY signal would be likely.`;
-                              return "Monitor for a catalyst that breaks the current stalemate — a WASDE report, weather event, or significant COT positioning shift.";
-                            })()}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Trading lesson */}
-                      <div style={{padding:"14px 16px",background:C.eucalyptusPale,borderRadius:3,borderLeft:`3px solid ${C.eucalyptus}`}}>
-                        <div style={{color:C.eucalyptus,fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700,letterSpacing:"0.12em",marginBottom:8}}>📚 WHAT A NEW TRADER SHOULD LEARN FROM THIS</div>
-                        <div style={{color:C.charcoal,fontSize:13,lineHeight:1.75,fontFamily:"'Lora',serif"}}>{entry.lesson}</div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
+          <Card style={{ padding: "20px 24px", marginBottom: 16, borderLeft: `4px solid ${C.warning}` }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.warning, marginBottom: 8 }}>⚠ PAPER TRADING SIMULATION ONLY</div>
+            <div style={{ fontSize: 12, color: C.charcoal, lineHeight: 1.7 }}>
+              All trades in Muster Auto Trader are simulated with paper money. No real orders are placed. Connection to Interactive Brokers is shown here for planning purposes. Live trading requires explicit activation and carries substantial risk of financial loss.
             </div>
-          )}
-        </div>
-      )}
+          </Card>
 
-      {/* ─── SETTINGS ─── */}
-      {activeTab==="settings" && (
-        <div style={{animation:"fadeIn 0.2s ease"}}>
-          <SectionHead label="TRADING SETTINGS"/>
-
-          {/* Fund size confirmation dialog */}
-          {pendingFundSize && (
-            <Card style={{padding:18,marginBottom:18,background:C.warningPale,border:`2px solid ${C.warning}`}}>
-              <div style={{color:C.warning,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:8}}>⚠ CONFIRM PORTFOLIO RESET</div>
-              <div style={{color:C.charcoal,fontSize:13,fontFamily:"'Lora',serif",lineHeight:1.6,marginBottom:14}}>Changing the fund size to <strong>${pendingFundSize.toLocaleString()}</strong> will reset your entire portfolio — all open positions, trade history, and the P&L curve will be cleared. This cannot be undone.</div>
-              <div style={{display:"flex",gap:10}}>
-                <Btn variant="red" onClick={()=>{ setFundSize(pendingFundSize); resetPortfolio(pendingFundSize); setPendingFundSize(null); }}>CONFIRM — RESET TO ${pendingFundSize.toLocaleString()}</Btn>
-                <Btn variant="outline" onClick={()=>setPendingFundSize(null)}>CANCEL</Btn>
-              </div>
-            </Card>
-          )}
-
-          {/* Fund size selector */}
-          <Card style={{padding:20,marginBottom:18,borderTop:`3px solid ${C.eucalyptus}`}}>
-            <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:4}}>Paper Trading Fund Size</div>
-            <div style={{color:C.wheatDark,fontSize:11,fontFamily:"'Lora',serif",marginBottom:16}}>Set your starting capital. Changing this will reset the portfolio.</div>
-            <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
-              <div style={{flex:1,minWidth:200}}>
-                <input type="range" min={1000} max={100000} step={1000} value={pendingFundSize??fundSize}
-                  onChange={e=>setPendingFundSize(Number(e.target.value))}
-                  style={{width:"100%",accentColor:C.eucalyptus}}
-                />
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
-                  <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>$1,000</span>
-                  <span style={{color:C.lightGrey,fontSize:9,fontFamily:"'DM Mono',monospace"}}>$100,000</span>
+          {/* Connection status */}
+          <Card style={{ padding: "20px 24px", marginBottom: 16 }}>
+            <SectionHead label="CONNECTION STATUS" />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: C.lightGrey }} />
+              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: C.wheatDark }}>DISCONNECTED</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { label: "Mode", val: ibkrMode === "paper" ? "Paper Trading (7497)" : "Live Trading (7496)" },
+                { label: "Host", val: "127.0.0.1" },
+                { label: "Client ID", val: "1" },
+                { label: "TWS Version", val: "—" },
+              ].map((f, i) => (
+                <div key={i} style={{ padding: "10px 12px", background: C.offwhite, borderRadius: 3 }}>
+                  <div style={{ fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.wheatDark, marginBottom: 3 }}>{f.label}</div>
+                  <div style={{ fontSize: 12, fontFamily: "'DM Mono',monospace", color: C.charcoal, fontWeight: 600 }}>{f.val}</div>
                 </div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{color:C.charcoal,fontSize:11,fontFamily:"'DM Mono',monospace"}}>$</span>
-                <input type="number" min={1000} max={100000} step={1000} value={pendingFundSize??fundSize}
-                  onChange={e=>setPendingFundSize(Math.min(100000,Math.max(1000,Number(e.target.value))))}
-                  style={{width:110,padding:"7px 10px",border:`1px solid ${C.lightGrey}`,borderRadius:3,fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:700,color:C.navy}}
-                />
-              </div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[1000,5000,10000,25000,50000,100000].map(v=>(
-                  <button key={v} onClick={()=>setPendingFundSize(v)}
-                    style={{background:fundSize===v&&!pendingFundSize?C.eucalyptus:pendingFundSize===v?C.navy:C.white,
-                      color:fundSize===v&&!pendingFundSize||pendingFundSize===v?C.white:C.charcoal,
-                      border:`1px solid ${fundSize===v&&!pendingFundSize?C.eucalyptus:C.lightGrey}`,
-                      borderRadius:3,padding:"6px 12px",cursor:"pointer",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
-                    ${v>=1000?`${v/1000}k`:v}
-                  </button>
-                ))}
-              </div>
+              ))}
             </div>
-            {pendingFundSize && pendingFundSize !== fundSize && (
-              <div style={{marginTop:12,display:"flex",gap:10,alignItems:"center"}}>
-                <div style={{color:C.warning,fontSize:11,fontFamily:"'DM Mono',monospace"}}>↳ New fund size: ${pendingFundSize.toLocaleString()} — click confirm above or apply here</div>
-                <Btn variant="navy" style={{fontSize:10,padding:"6px 14px"}} onClick={()=>{ setFundSize(pendingFundSize); resetPortfolio(pendingFundSize); setPendingFundSize(null); }}>APPLY & RESET</Btn>
-                <Btn variant="outline" style={{fontSize:10,padding:"6px 14px"}} onClick={()=>setPendingFundSize(null)}>CANCEL</Btn>
+          </Card>
+
+          {/* Mode selector */}
+          <Card style={{ padding: "20px 24px", marginBottom: 16 }}>
+            <SectionHead label="TRADING MODE" />
+            <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+              <button onClick={() => setIbkrMode("paper")}
+                style={{ flex: 1, padding: "12px", background: ibkrMode === "paper" ? C.navyPale : C.offwhite, border: `2px solid ${ibkrMode === "paper" ? C.navy : C.lightGrey}`, borderRadius: 4, cursor: "pointer", fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: ibkrMode === "paper" ? C.navy : C.charcoal }}>
+                PAPER TRADING<br /><span style={{ fontSize: 9, fontWeight: 400 }}>Port 7497 · Safe</span>
+              </button>
+              <button onClick={() => setIbkrShowConfirm(true)}
+                style={{ flex: 1, padding: "12px", background: ibkrMode === "live" ? C.negativePale : C.offwhite, border: `2px solid ${ibkrMode === "live" ? C.negative : C.lightGrey}`, borderRadius: 4, cursor: "pointer", fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: ibkrMode === "live" ? C.negative : C.charcoal }}>
+                LIVE TRADING<br /><span style={{ fontSize: 9, fontWeight: 400 }}>Port 7496 · Real money</span>
+              </button>
+            </div>
+
+            {/* Live confirmation modal */}
+            {ibkrShowConfirm && (
+              <div style={{ padding: "16px", background: C.negativePale, border: `1px solid ${C.negative}`, borderRadius: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.negative, marginBottom: 8 }}>⚠ ENABLE LIVE TRADING?</div>
+                <div style={{ fontSize: 12, color: C.charcoal, marginBottom: 12, lineHeight: 1.6 }}>
+                  This will connect to your Interactive Brokers live account and place real orders with real money. Losses can exceed your initial investment. This system has not been audited by a financial regulator.
+                  <br /><br />Type <strong>I UNDERSTAND THE RISKS</strong> to confirm.
+                </div>
+                <input value={ibkrConfirmText} onChange={e => setIbkrConfirmText(e.target.value)}
+                  placeholder="Type confirmation here…"
+                  style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.negative}`, borderRadius: 3, fontFamily: "'DM Mono',monospace", fontSize: 12, marginBottom: 10, boxSizing: "border-box" }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn onClick={() => { if (ibkrConfirmText === "I UNDERSTAND THE RISKS") { setIbkrMode("live"); setIbkrShowConfirm(false); setIbkrConfirmText(""); } }} variant="red" disabled={ibkrConfirmText !== "I UNDERSTAND THE RISKS"}>CONFIRM LIVE MODE</Btn>
+                  <Btn onClick={() => { setIbkrShowConfirm(false); setIbkrConfirmText(""); }} variant="outline">CANCEL</Btn>
+                </div>
               </div>
             )}
           </Card>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginBottom:18}}>
-            <Card style={{padding:20}}>
-              <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:14}}>Risk Management</div>
-              {[
-                {l:"Starting Capital",     v:`$${portfolio.initialCapital.toLocaleString()}`, note:"Set at initialisation"},
-                {l:"Daily Loss Limit",     v:`$${portfolio.dailyLossLimit.toFixed(0)} (5% of capital)`, note:"Trading halts if breached"},
-                {l:"Max Open Positions",   v:"5", note:"Prevents overexposure"},
-                {l:"Min Signal Confidence",v:"65%", note:"Below this = HOLD"},
-                {l:"Max Contracts/Trade",  v:"3", note:"Scales with confidence"},
-                {l:"Risk Per Trade",       v:"Claude-managed (0.5–5%)", note:"Based on signal confidence"},
-                {l:"Stop Loss Method",     v:"ATR-based (0.8% price proxy)", note:"Auto-calculated per instrument"},
-                {l:"Min R:R Ratio",        v:"2:1", note:"TP always 2x the SL distance"},
-              ].map(({l,v,note})=>(
-                <div key={l} style={{padding:"8px 0",borderBottom:`1px solid ${C.lightGrey}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{color:C.charcoal,fontSize:12}}>{l}</span><span style={{color:C.navy,fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{v}</span></div>
-                  <div style={{color:C.wheatDark,fontSize:10}}>{note}</div>
-                </div>
-              ))}
-            </Card>
-            <Card style={{padding:20}}>
-              <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:14}}>Scan Frequency</div>
-              <div style={{marginBottom:16}}>
-                <div style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",marginBottom:6}}>SCAN EVERY (MINUTES)</div>
-                <div style={{display:"flex",gap:8}}>
-                  {[15,30,60,120].map(m=>(
-                    <button key={m} onClick={()=>setPortfolio(p=>({...p,signalInterval:m}))} style={{background:portfolio.signalInterval===m?C.eucalyptus:C.white,color:portfolio.signalInterval===m?C.white:C.charcoal,border:`1px solid ${portfolio.signalInterval===m?C.eucalyptus:C.lightGrey}`,borderRadius:3,padding:"8px 14px",cursor:"pointer",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:500}}>{m}m</button>
-                  ))}
-                </div>
+          {/* Setup instructions */}
+          <Card style={{ padding: "20px 24px" }}>
+            <SectionHead label="SETUP GUIDE" />
+            {[
+              "1. Install Interactive Brokers TWS or IB Gateway",
+              "2. In TWS: Configure → API → Settings → Enable ActiveX and Socket Clients",
+              "3. Set Socket port to 7497 (paper) or 7496 (live)",
+              "4. Allow localhost connections (127.0.0.1)",
+              "5. Start Muster with IBKR environment variables configured",
+              "6. Paper test thoroughly before enabling live mode",
+            ].map((step, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: i < 5 ? `1px solid ${C.offwhite}` : "none" }}>
+                <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: C.wheatDark, flexShrink: 0 }}>→</span>
+                <span style={{ fontSize: 12, color: C.charcoal, lineHeight: 1.5 }}>{step}</span>
               </div>
-              <div style={{color:C.charcoal,fontSize:13,fontWeight:600,marginBottom:10,marginTop:18}}>IBKR Live Trading Hook</div>
-              <div style={{padding:"12px 14px",background:C.offwhite,border:`1px dashed ${C.lightGrey}`,borderRadius:3,marginBottom:10}}>
-                <div style={{color:C.wheatDark,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600,marginBottom:4}}>⚡ HOOK: Interactive Brokers API</div>
-                <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6,fontFamily:"'Lora',serif"}}>When you're ready to go live, replace the paper execution layer with IBKR's TWS API. All signal logic stays the same — only the order execution changes. Requires: IBKR account, TWS running, API enabled on port 7497.</div>
-              </div>
-              <div style={{color:C.charcoal,fontSize:11,lineHeight:1.6,fontFamily:"'Lora',serif"}}>
-                <strong>Recommended path to live trading:</strong><br/>
-                1. Run paper mode for 3+ months<br/>
-                2. Achieve &gt;50% win rate and profit factor &gt;1.5<br/>
-                3. Open IBKR account with $10,000 real capital<br/>
-                4. Enable IBKR API hook above<br/>
-                5. Start live with same risk settings
-              </div>
-              <div style={{marginTop:16}}>
-                <Btn variant="red" onClick={resetPortfolio} style={{fontSize:11,width:"100%"}}>🔄 RESET PAPER PORTFOLIO</Btn>
-              </div>
-            </Card>
-          </div>
-          <Card style={{padding:16,background:C.warningPale,border:`1px solid ${C.warning}33`}}>
-            <div style={{color:C.warning,fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:700,marginBottom:4}}>⚠ PAPER TRADING DISCLAIMER</div>
-            <div style={{color:C.charcoal,fontSize:12,lineHeight:1.6,fontFamily:"'Lora',serif"}}>This is a paper trading simulation using simulated price movements. Results do not reflect actual market performance and are not indicative of future results. Live commodity futures trading involves substantial risk of loss and is not suitable for all investors. Always consult a licensed financial advisor before trading with real capital. This tool is for educational and research purposes only.</div>
+            ))}
           </Card>
         </div>
       )}
