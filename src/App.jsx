@@ -3,6 +3,10 @@ import IntelligenceFeed from "./IntelligenceFeed";
 import AustraliaTab from "./AustraliaTab";
 import AutoTrader from "./AutoTrader";
 
+// ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
+const save = (key, data) => { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { console.error('Storage error:', e); } }
+const load = (key, fallback) => { try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; } catch(e) { return fallback; } }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // COLOUR SYSTEM
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1316,7 +1320,8 @@ function Portfolio(){
     {id:3,commodity:"ZC",direction:"SHORT",contracts:1,entryPrice:485.00,stopLoss:495.00,target:462.00,entryDate:"Mar 28",thesis:"China demand risk + harvest pressure",status:"open"},
     {id:4,commodity:"ZS",direction:"LONG", contracts:2,entryPrice:1072.00,stopLoss:1055.00,target:1110.00,entryDate:"Mar 15",thesis:"ARG weather risk + fund support",status:"closed",closePrice:1087.75,closePnl:3150},
   ];
-  const [positions,setPositions]=useState(defaultPos);
+  const [positions,setPositions]=useState(()=>load("muster_positions",defaultPos));
+  useEffect(()=>{ save("muster_positions",positions); },[positions]);
   const [showAdd,setShowAdd]=useState(false);
   const [form,setForm]=useState({commodity:"ZC",direction:"LONG",contracts:1,entryPrice:"",stopLoss:"",target:"",thesis:""});
   function calcPnL(pos){const cur=PRICES[pos.commodity]?.price||pos.entryPrice;const cs={ZC:5000,ZW:5000,ZS:5000,ZM:100,LE:400,HE:400}[pos.commodity]||1000;const diff=pos.direction==="LONG"?cur-pos.entryPrice:pos.entryPrice-cur;return diff*cs*pos.contracts/100;}
@@ -1446,8 +1451,10 @@ function Education(){
   const [progress,setProgress]=useState(loadProgress);
   const saveProgress=p=>{setProgress(p);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(p));}catch{}};
 
-  const [activeMod,setActiveMod]=useState(null);
-  const [activeSec,setActiveSec]=useState(0);
+  const savedNav=load("muster_lessons_progress",{});
+  const [activeMod,setActiveMod]=useState(savedNav.activeMod||null);
+  const [activeSec,setActiveSec]=useState(savedNav.activeSec||0);
+  useEffect(()=>{ save("muster_lessons_progress",{activeMod,activeSec}); },[activeMod,activeSec]);
   const [quizMode,setQuizMode]=useState(false);
   const [quizAnswers,setQuizAnswers]=useState({});
   const [quizSubmitted,setQuizSubmitted]=useState(false);
@@ -1688,7 +1695,8 @@ function TradeJournal(){
     {id:2,date:"Mar 15 2026",commodity:"ZS",direction:"LONG",result:"win", pnl:3150,preAnalysis:"ARG weather deteriorating — second crop pampas dry. Fund long building. Brazil crop large but already priced. Tight US basis suggesting demand firm.",postAnalysis:"Thesis played out. ARG weather got worse, triggered a sharp move. Key lesson: the ARG weather story was the catalyst, not the Brazil supply — important to know WHICH driver is moving prices.",tags:["Weather","Fundamental","Brazil/ARG"]},
     {id:3,date:"Feb 20 2026",commodity:"ZC",direction:"SHORT",result:"loss",pnl:-1200,preAnalysis:"China demand weak post-holiday. DXY firm. WASDE bearish corn. Expecting continued pressure lower.",postAnalysis:"Wrong on timing — stopped out by a weather scare that turned out to be nothing. Lesson: even when fundamentals are bearish, short-covering rallies can be violent. Need wider stops or smaller size near potential weather catalyst periods.",tags:["Macro","Mistake","Sizing"]},
   ];
-  const [entries,setEntries]=useState(defaultEntries);
+  const [entries,setEntries]=useState(()=>load("muster_journal",defaultEntries));
+  useEffect(()=>{ save("muster_journal",entries); },[entries]);
   const [showAdd,setShowAdd]=useState(false);
   const [activeEntry,setActiveEntry]=useState(null);
   const [form,setForm]=useState({date:"",commodity:"ZC",direction:"LONG",result:"open",pnl:"",preAnalysis:"",postAnalysis:"",tags:""});
@@ -1777,12 +1785,14 @@ function TradeJournal(){
 // ALERTS ENGINE
 // ─────────────────────────────────────────────────────────────────────────────
 function Alerts(){
-  const [alerts,setAlerts]=useState([
+  const defaultAlerts=[
     {id:1,type:"price",  commodity:"ZW",condition:"above",value:600,  active:true, label:"Wheat above 600¢"},
     {id:2,type:"price",  commodity:"ZC",condition:"below",value:460,  active:true, label:"Corn below 460¢"},
     {id:3,type:"report", name:"WASDE",  date:"Apr 8",     active:true, label:"WASDE report — Apr 8"},
     {id:4,type:"weather",region:"US Plains",severity:"severe",active:true,label:"US Plains drought severe"},
-  ]);
+  ];
+  const [alerts,setAlerts]=useState(()=>load("muster_alerts",defaultAlerts));
+  useEffect(()=>{ save("muster_alerts",alerts); },[alerts]);
   const [showAdd,setShowAdd]=useState(false);
   const [form,setForm]=useState({commodity:"ZC",condition:"above",value:""});
   function add(){if(!form.value)return;const c=COMMODITIES.find(c=>c.symbol===form.commodity);setAlerts(p=>[...p,{id:Date.now(),type:"price",commodity:form.commodity,condition:form.condition,value:parseFloat(form.value),active:true,label:`${c?.name} ${form.condition} ${form.value}`}]);setForm({commodity:"ZC",condition:"above",value:""});setShowAdd(false);}
@@ -2048,6 +2058,41 @@ function ReportsTab(){
           </div>
         ))}
       </Card>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STORAGE INDICATOR
+// ─────────────────────────────────────────────────────────────────────────────
+function StorageIndicator(){
+  const [kb,setKb]=useState(0);
+  useEffect(()=>{
+    function calcKb(){
+      let total=0;
+      try{
+        for(const key of Object.keys(localStorage)){
+          if(key.startsWith("muster_")){
+            total+=(localStorage.getItem(key)||"").length;
+          }
+        }
+      }catch{}
+      setKb((total/1024).toFixed(1));
+    }
+    calcKb();
+    const iv=setInterval(calcKb,5000);
+    return()=>clearInterval(iv);
+  },[]);
+  function clearAll(){
+    if(!window.confirm("Clear all Muster saved data? This resets portfolio, journal, alerts, and learning progress.")) return;
+    Object.keys(localStorage).filter(k=>k.startsWith("muster_")).forEach(k=>localStorage.removeItem(k));
+    window.location.reload();
+  }
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <span style={{color:C.eucalyptus,fontSize:10,fontFamily:"'DM Mono',monospace"}}>● AUTO-SAVING</span>
+      <span style={{color:"#555",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{kb} KB / 5000 KB</span>
+      <button onClick={clearAll} style={{background:"none",border:"1px solid #444",borderRadius:2,color:"#666",fontSize:9,fontFamily:"'DM Mono',monospace",padding:"2px 8px",cursor:"pointer"}}>CLEAR ALL DATA</button>
     </div>
   );
 }
@@ -2329,8 +2374,9 @@ export default function Muster() {
       </div>
 
       {/* FOOTER */}
-      <div style={{borderTop:`1px solid ${C.lightGrey}`,padding:"10px 24px",display:"flex",justifyContent:"space-between",background:C.charcoal}}>
+      <div style={{borderTop:`1px solid ${C.lightGrey}`,padding:"10px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",background:C.charcoal,flexWrap:"wrap",gap:8}}>
         <span style={{color:"#555",fontSize:10,fontFamily:"'DM Mono',monospace"}}>MUSTER v1.0 — ALL 16 MODULES — PERSONAL USE ONLY</span>
+        <StorageIndicator/>
         <span style={{color:"#555",fontSize:10,fontFamily:"'DM Mono',monospace"}}>PRICES: SIMULATED · AI: LIVE · API HOOKS READY · NOT FINANCIAL ADVICE</span>
       </div>
     </div>

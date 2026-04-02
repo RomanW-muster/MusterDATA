@@ -1,16 +1,21 @@
 import { useState, useEffect } from "react";
 
+// ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
+const save = (key, data) => { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { console.error('Storage error:', e); } }
+const load = (key, fallback) => { try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; } catch(e) { return fallback; } }
+
 const RSS_FEEDS = [
-  "https://api.rss2json.com/v1/api.json?rss_url=https://graincentral.com/feed",
-  "https://api.rss2json.com/v1/api.json?rss_url=https://commodity.com/feed/",
-  "https://api.rss2json.com/v1/api.json?rss_url=https://www.nasdaq.com/feed/rssoutbound?category=commodities",
-  "https://api.rss2json.com/v1/api.json?rss_url=https://feeds.marketwatch.com/marketwatch/marketpulse/",
+  { id:"graincentral", label:"Grain Central",  url:"https://api.rss2json.com/v1/api.json?rss_url=https://graincentral.com/feed" },
+  { id:"commodity",    label:"Commodity.com",  url:"https://api.rss2json.com/v1/api.json?rss_url=https://commodity.com/feed/" },
+  { id:"nasdaq",       label:"Nasdaq",         url:"https://api.rss2json.com/v1/api.json?rss_url=https://www.nasdaq.com/feed/rssoutbound?category=commodities" },
+  { id:"marketwatch",  label:"MarketWatch",    url:"https://api.rss2json.com/v1/api.json?rss_url=https://feeds.marketwatch.com/marketwatch/marketpulse/" },
 ];
 
-async function fetchRssArticles() {
+async function fetchRssArticles(activeSources) {
+  const feeds = RSS_FEEDS.filter(f => activeSources[f.id] !== false);
   const results = await Promise.all(
-    RSS_FEEDS.map(url =>
-      fetch(url)
+    feeds.map(f =>
+      fetch(f.url)
         .then(r => r.json())
         .catch(() => null)
     )
@@ -49,28 +54,43 @@ export default function IntelligenceFeed() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sources, setSources] = useState(() => load("muster_sources", Object.fromEntries(RSS_FEEDS.map(f => [f.id, true]))));
+
+  useEffect(() => { save("muster_sources", sources); }, [sources]);
+
+  function toggleSource(id) {
+    setSources(prev => ({ ...prev, [id]: !prev[id] }));
+  }
 
   useEffect(() => {
     setLoading(true);
-    fetchRssArticles()
+    fetchRssArticles(sources)
       .then(data => {
         setArticles(data);
         setLoading(false);
       })
-      .catch(err => {
+      .catch(() => {
         setError("Failed to load feeds.");
         setLoading(false);
       });
-  }, []);
+  }, [sources]);
 
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <div style={{ color: C.wheatDark, fontSize: 10, fontFamily: "'DM Mono',monospace", letterSpacing: "0.12em", marginBottom: 4 }}>
+        <span style={{ background: "#2F4F3E", color: "#ffffff", padding: "4px 12px", borderRadius: 3, fontFamily: "'DM Mono',monospace", fontSize: 10, letterSpacing: "0.12em", fontWeight: 600, display: "inline-block", marginBottom: 12 }}>
           INTELLIGENCE FEED
+        </span>
+        <div style={{ color: C.charcoal, fontSize: 11, fontFamily: "'DM Mono',monospace", marginBottom: 10 }}>
+          {loading ? "Loading live Ag news…" : error ? error : `${articles.length} articles loaded`}
         </div>
-        <div style={{ color: C.charcoal, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
-          {loading ? "Loading live Ag news…" : error ? error : `${articles.length} articles · Grain Central · Commodity.com · Nasdaq · MarketWatch`}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {RSS_FEEDS.map(f => (
+            <button key={f.id} onClick={() => toggleSource(f.id)}
+              style={{ background: sources[f.id] !== false ? C.eucalyptus : C.lightGrey, color: sources[f.id] !== false ? C.white : C.charcoal, border: "none", borderRadius: 2, padding: "3px 10px", cursor: "pointer", fontSize: 9, fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>
+              {sources[f.id] !== false ? "●" : "○"} {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -96,6 +116,8 @@ export default function IntelligenceFeed() {
               borderLeft: `3px solid ${C.eucalyptus}`,
               borderRadius: 3,
               padding: "12px 16px",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <a
@@ -143,7 +165,7 @@ export default function IntelligenceFeed() {
       {!loading && articles.length > 0 && (
         <div style={{ marginTop: 16, padding: "8px 12px", background: C.offwhite, border: `1px dashed ${C.lightGrey}`, borderRadius: 3 }}>
           <span style={{ color: C.wheatDark, fontSize: 10, fontFamily: "'DM Mono',monospace" }}>
-            Sources: Grain Central · Commodity.com · Nasdaq Commodities · MarketWatch · Refreshes every 5 min
+            Active: {RSS_FEEDS.filter(f => sources[f.id] !== false).map(f => f.label).join(" · ")} · Toggle sources above · Refreshes on change
           </span>
         </div>
       )}

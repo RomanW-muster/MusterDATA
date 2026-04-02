@@ -5,6 +5,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
+const save = (key, data) => { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { console.error('Storage error:', e); } }
+const load = (key, fallback) => { try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; } catch(e) { return fallback; } }
+
 // ─── COLOURS ─────────────────────────────────────────────────────────────────
 const C = {
   eucalyptus:"#2F4F3E", eggshell:"#F4F1EA", navy:"#1E2F3F", wheat:"#C8A96A",
@@ -317,31 +321,36 @@ export default function AutoTrader() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isRunning, setIsRunning] = useState(false);
   const [scanningSymbol, setScanningSymbol] = useState(null);
-  const [fundSize, setFundSize] = useState(10000);
+  const [fundSize, setFundSize] = useState(() => load("muster_portfolio", null)?.initialCapital || 10000);
   const [pendingFund, setPendingFund] = useState("");
-  const [log, setLog] = useState([]);
+  const [log, setLog] = useState(() => load("muster_tradelog", []));
+  const [lastSaved, setLastSaved] = useState(null);
   const [selectedInst, setSelectedInst] = useState("ZW"); // for reasoning tab
   const [ibkrMode, setIbkrMode] = useState("paper");
   const [ibkrConfirmText, setIbkrConfirmText] = useState("");
   const [ibkrShowConfirm, setIbkrShowConfirm] = useState(false);
 
-  const [prevScores, setPrevScores] = useState({});
+  const [prevScores, setPrevScores] = useState(() => load("muster_signals", {}));
   const [attribution, setAttribution] = useState(
     Object.fromEntries(Object.keys(WEIGHTS).map(k => [k, { correct: 0, total: 0 }]))
   );
 
   const initialCapital = fundSize;
 
-  const [portfolio, setPortfolio] = useState({
-    cash: initialCapital,
-    initialCapital,
-    positions: [],
-    closedTrades: [],
-    pnlHistory: [initialCapital],
-    dailyLoss: 0,
-    weeklyLoss: 0,
-    halted: false,
-    haltReason: "",
+  const [portfolio, setPortfolio] = useState(() => {
+    const saved = load("muster_portfolio", null);
+    if (saved) return saved;
+    return {
+      cash: initialCapital,
+      initialCapital,
+      positions: [],
+      closedTrades: [],
+      pnlHistory: [initialCapital],
+      dailyLoss: 0,
+      weeklyLoss: 0,
+      halted: false,
+      haltReason: "",
+    };
   });
 
   const [prices, setPrices] = useState(() =>
@@ -358,6 +367,14 @@ export default function AutoTrader() {
   useEffect(() => { pricesRef.current = prices; }, [prices]);
   useEffect(() => { prevScoresRef.current = prevScores; }, [prevScores]);
   useEffect(() => { attributionRef.current = attribution; }, [attribution]);
+
+  // ── Persist to localStorage ──────────────────────────────────────────────────
+  useEffect(() => {
+    save("muster_portfolio", portfolio);
+    setLastSaved(new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  }, [portfolio]);
+  useEffect(() => { save("muster_tradelog", log); }, [log]);
+  useEffect(() => { save("muster_signals", prevScores); }, [prevScores]);
 
   const addLog = useCallback((msg, type = "info") => {
     setLog(prev => [{ msg, type, time: new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) }, ...prev.slice(0, 49)]);
@@ -574,10 +591,12 @@ export default function AutoTrader() {
   const handleStop = () => { setIsRunning(false); addLog("Auto-trader STOPPED", "system"); };
   const handleReset = () => {
     setIsRunning(false);
+    ["muster_portfolio","muster_tradelog","muster_signals"].forEach(k => localStorage.removeItem(k));
     setPortfolio({ cash: fundSize, initialCapital: fundSize, positions: [], closedTrades: [], pnlHistory: [fundSize], dailyLoss: 0, weeklyLoss: 0, halted: false, haltReason: "" });
     setAttribution(Object.fromEntries(Object.keys(WEIGHTS).map(k => [k, { correct: 0, total: 0 }])));
     setPrevScores({});
     setLog([]);
+    setLastSaved(null);
     addLog("Portfolio reset", "system");
   };
 
@@ -605,6 +624,7 @@ export default function AutoTrader() {
         <div>
           <span style={{ background: C.navy, color: C.white, padding: "5px 14px", borderRadius: 3, fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em" }}>AUTO TRADER</span>
           <span style={{ marginLeft: 10, fontSize: 11, fontFamily: "'DM Mono',monospace", color: C.wheatDark }}>PAPER MODE · {INSTRUMENTS.length} instruments</span>
+          {lastSaved && <span style={{ marginLeft: 10, fontSize: 9, fontFamily: "'DM Mono',monospace", color: C.eucalyptus }}>● Saved {lastSaved}</span>}
           {portfolio.halted && <span style={{ marginLeft: 10, background: C.negativePale, color: C.negative, padding: "3px 8px", borderRadius: 3, fontSize: 10, fontFamily: "'DM Mono',monospace", fontWeight: 700 }}>HALTED: {portfolio.haltReason}</span>}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
